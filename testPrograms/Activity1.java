@@ -25,22 +25,19 @@ public class Activity1 {
 			}
 		}).start();
 		
-		while(true)
+		leftMotor.setSpeed(90);
+		rightMotor.setSpeed(90);
+		leftMotor.forward();
+		rightMotor.forward();
+		
+		do
 		{
 			temp.fetchSample(distances, 0);
-			System.out.println("Distance to obstacle: "+distances[0]);
-			if(distances[0]>10.0) //10 cm
-			{
-				
-				leftMotor.forward();
-				rightMotor.forward();
-			}
-			else
-			{
-				leftMotor.backward();
-				rightMotor.backward();
-			}
 		}
+		while(distances[0] > 10);
+		
+		leftMotor.backward();
+		rightMotor.backward();
 	}
 
 }
