@@ -1,6 +1,7 @@
 package testPrograms;
 
 import lejos.hardware.Button;
+import lejos.hardware.Sound;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 import lejos.hardware.port.MotorPort;
 import lejos.hardware.port.SensorPort;
@@ -35,9 +36,22 @@ public class Activity1 {
 			temp.fetchSample(distances, 0);
 		}
 		while(distances[0] > 10);
-		
+			
 		leftMotor.backward();
 		rightMotor.backward();
+		 
+		int reading = leftMotor.getTachoCount();
+		
+		while(reading > 0)
+		{
+			reading = leftMotor.getTachoCount();
+			System.out.println(reading);
+		}
+		
+		leftMotor.stop();
+		rightMotor.stop();
+		
+	
 	}
 
 }
