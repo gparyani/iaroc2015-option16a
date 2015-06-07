@@ -35,12 +35,13 @@ public class Activity1 {
 		{
 			temp.fetchSample(distances, 0);
 		}
-		while(distances[0] > 10);
-			
+		while(distances[0] > 10); //keep on getting distance while distance is greater than 10. 
+								  //check if distance is 10 AFTER you get the distance.
+								  //exits loop when distance is less than 10.
 		leftMotor.backward();
 		rightMotor.backward();
 		 
-		int reading = leftMotor.getTachoCount();
+		int reading = leftMotor.getTachoCount(); //TachoCount will get lower when moving backwards
 		
 		while(reading > 0)
 		{
