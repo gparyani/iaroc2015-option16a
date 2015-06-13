@@ -11,7 +11,7 @@ import lejos.hardware.sensor.SensorMode;
 import lejos.robotics.SampleProvider;
 import lejos.utility.Delay;
 
-public class Activity3 {
+public class Activity1Old {
 
 	public static void main(String[] args) {
 		EV3LargeRegulatedMotor leftMotor = new EV3LargeRegulatedMotor(MotorPort.B);
@@ -66,7 +66,7 @@ public class Activity3 {
 
 }
 
-class GyroSteeringThread implements Runnable
+class GyroSteeringThreadOld implements Runnable
 {
 	@Override
 	public void run() {
@@ -82,7 +82,7 @@ class GyroSteeringThread implements Runnable
 			while(true)
 			{
 				provider.fetchSample(value, 0);
-				if(value[0] < -1 * ANGLE_ERROR_MARGIN || value[0] > ANGLE_ERROR_MARGIN)	//too much to the right
+				if(value[0] < -1 * ANGLE_ERROR_MARGIN && value[0] > ANGLE_ERROR_MARGIN)	//too much to the right
 					steeringMotor.rotateTo((int) (MULTIPLIER * value[0]));
 				else
 					steeringMotor.rotateTo(0);
