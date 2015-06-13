@@ -13,17 +13,26 @@ import lejos.robotics.SampleProvider;
 public class Activity1 {
 
 	public static void main(String[] args) {
+//Declarations
 		EV3LargeRegulatedMotor leftMotor = new EV3LargeRegulatedMotor(MotorPort.B);
 		EV3LargeRegulatedMotor rightMotor = new EV3LargeRegulatedMotor(MotorPort.C);
 		NXTUltrasonicSensor rightSensor = new NXTUltrasonicSensor(SensorPort.S3);
+		NXTUltrasonicSensor leftSensor = new NXTUltrasonicSensor(SensorPort.S2);
 		EV3IRSensor irSensor = new EV3IRSensor(SensorPort.S4);
+		RobotStatus status = RobotStatus.Forward;
+		int tachoReading;
 		float[] distances = new float[1];
 		float[] rSample = new float[1];
+		float[] lSample = new float[1];
+		
+//Set-up
 		SensorMode temp = irSensor.getDistanceMode();
 		rightSensor.enable();
+		leftSensor.enable();
 		SampleProvider rightSense = rightSensor.getDistanceMode();
-		//TODO: Check if Button.waitForAnyPress() is used correctly
-		
+		SampleProvider leftSense = leftSensor.getDistanceMode();
+		leftMotor.setSpeed(90);
+		rightMotor.setSpeed(90);
 		new Thread(new Runnable() {
 			public void run()
 			{
@@ -32,43 +41,50 @@ public class Activity1 {
 			}
 		}).start();
 		
-		leftMotor.setSpeed(90);
-		rightMotor.setSpeed(90);
-		leftMotor.forward();
-		rightMotor.forward();
-		
-		do
+//Loop Function
+		while(true)
 		{
+			
+//Update Sensors
 			temp.fetchSample(distances, 0);
 			rightSense.fetchSample(rSample, 0);
+			leftSense.fetchSample(lSample, 0);
+			tachoReading = leftMotor.getTachoCount(); //TachoCount will get lower when moving backwards
+			if(status == RobotStatus.Forward)
+			{
+				leftMotor.forward();
+				rightMotor.forward();
+				if(distances[0]<10)
+				{
+					leftMotor.stop();
+					rightMotor.stop();
+					status = RobotStatus.Backward;
+				}
+			}
+			else
+			{
+				leftMotor.backward();
+				rightMotor.backward();
+				tachoReading = leftMotor.getTachoCount();
+				if(tachoReading == 0)
+				{
+					leftMotor.stop();
+					rightMotor.stop();
+					status = RobotStatus.Forward;
+				}
+			}
 			if(rSample[0]>1.0)
 			{
 				Sound.twoBeeps();
 			}
-		}
-		while(distances[0] > 10); //keep on getting distance while distance is greater than 10. 
-								  //check if distance is 10 AFTER you get the distance.
-								  //exits loop when distance is less than 10.
-		leftMotor.backward();
-		rightMotor.backward();
-		 
-		int reading = leftMotor.getTachoCount(); //TachoCount will get lower when moving backwards
-		
-		while(reading > 0)
-		{
-			reading = leftMotor.getTachoCount();
-			System.out.println(reading);
-			rightSense.fetchSample(rSample, 0);
-			if(rSample[0]>1.0)
+			if(lSample[0]>1.0)
 			{
-				Sound.twoBeeps();
+				Sound.buzz();
 			}
 		}
-		
-		leftMotor.stop();
-		rightMotor.stop();
-		
-	
 	}
-
+	
+	public enum RobotStatus{
+		Forward, Backward;
+	}
 }
