@@ -25,7 +25,7 @@ public class Activity1 {
 	static int trueMultiplier = MULTIPLIER;
 
 	public enum Status{
-		Forward, Backward;
+		Forward, Backward, Turning_Left, Turning_Right;
 	}
 	
 	private static Status currentStatus;
@@ -43,15 +43,26 @@ public class Activity1 {
 			rightMotor.stop();
 			switch(newStatus){
 			case Backward:
+				steeringMotor.rotateTo(0);
 				rightMotor.backward();
 				leftMotor.backward();
 				trueMultiplier = -MULTIPLIER;
 				break;
 			case Forward:
+				steeringMotor.rotateTo(0);
 				rightMotor.forward();
 				leftMotor.forward();
 				trueMultiplier = MULTIPLIER;
 				break;
+			case Turning_Left:
+				steeringMotor.rotateTo(-90);
+				rightMotor.forward();
+				leftMotor.forward();
+				break;
+			case Turning_Right:
+				steeringMotor.rotateTo(90);
+				rightMotor.forward();
+				leftMotor.forward();
 			default:
 				break;
 			}
@@ -95,7 +106,7 @@ public class Activity1 {
 //Declarations
 		leftMotor = new EV3LargeRegulatedMotor(MotorPort.B);
 		rightMotor = new EV3LargeRegulatedMotor(MotorPort.C);
-		EV3MediumRegulatedMotor steeringMotor = new EV3MediumRegulatedMotor(MotorPort.A);
+		steeringMotor = new EV3MediumRegulatedMotor(MotorPort.A);
 		rightSensor = new NXTUltrasonicSensor(SensorPort.S3);
 		leftSensor = new NXTUltrasonicSensor(SensorPort.S2);
 		irSensor = new EV3IRSensor(SensorPort.S4);
@@ -151,6 +162,11 @@ public class Activity1 {
 				{
 					setStatus(Status.Backward);
 				}
+				if(gyroAngle[0] < -1 * ANGLE_ERROR_MARGIN || gyroAngle[0] > ANGLE_ERROR_MARGIN)	//too much to the right
+					steeringMotor.rotateTo((int) (trueMultiplier * gyroAngle[0]));
+				else
+					steeringMotor.rotateTo(0);
+				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
 			}
 			else
 			{
@@ -159,23 +175,38 @@ public class Activity1 {
 				{
 					setStatus(Status.Forward);
 				}
+				if(gyroAngle[0] < -1 * ANGLE_ERROR_MARGIN || gyroAngle[0] > ANGLE_ERROR_MARGIN)	//too much to the right
+					steeringMotor.rotateTo((int) (trueMultiplier * gyroAngle[0]));
+				else
+					steeringMotor.rotateTo(0);
+				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
 			}
 			System.out.println("After changing states at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
-//			if(rSample[0]>1.0)
-//			{
-//				Sound.twoBeeps();
-//			}
-//			if(lSample[0]>1.0)
-//			{
-//				Sound.buzz();
-//			}
-//			System.out.println("After beeping at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
 			angleSense.fetchSample(gyroAngle, 0);
-			if(gyroAngle[0] < -1 * ANGLE_ERROR_MARGIN || gyroAngle[0] > ANGLE_ERROR_MARGIN)	//too much to the right
-				steeringMotor.rotateTo((int) (trueMultiplier * gyroAngle[0]));
-			else
-				steeringMotor.rotateTo(0);
-			System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
+			if(rSample[0]>1.0)
+			{
+				float endAngle = gyroAngle[0]-90;
+				setStatus(Status.Turning_Right);
+				System.out.println("Turning Right " + i);
+				if(gyroAngle[0]<endAngle)
+				{
+					setStatus(Status.Forward);
+					System.out.println("Moving Forward " + i);
+				}
+			}
+			if(lSample[0]>1.0)
+			{
+				float endAngle = gyroAngle[0]+90;
+				setStatus(Status.Turning_Left);
+				System.out.println("Turning Left " + i);
+				if(gyroAngle[0]>endAngle)
+				{
+					setStatus(Status.Forward);
+					System.out.println("Moving Forward " + i);
+				}
+			}
+//			System.out.println("After beeping at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
+			
 		}
 	}
 }
