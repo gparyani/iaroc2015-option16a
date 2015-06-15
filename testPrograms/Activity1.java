@@ -17,6 +17,7 @@ public class Activity1 {
 
 	static EV3LargeRegulatedMotor leftMotor;
 	static EV3LargeRegulatedMotor rightMotor;
+	static EV3MediumRegulatedMotor steeringMotor;
 	static NXTUltrasonicSensor rightSensor;
 	static NXTUltrasonicSensor leftSensor;
 	static EV3IRSensor irSensor;
@@ -58,6 +59,37 @@ public class Activity1 {
 		currentStatus = newStatus;
 	}
 	
+	public static void align()
+	{
+		do
+		{
+			steeringMotor.setSpeed(120);
+			steeringMotor.forward();
+		}
+		while(steeringMotor.isStalled() != true);
+		
+		int rCount = steeringMotor.getTachoCount();
+		steeringMotor.stop();
+		System.out.println(rCount);
+		
+		do
+		{
+			steeringMotor.setSpeed(120);
+			steeringMotor.backward();
+		}
+		while(steeringMotor.isStalled() != true);
+		
+		int lCount = steeringMotor.getTachoCount();
+		steeringMotor.stop();
+		System.out.println(lCount);
+		
+		int average = (lCount + rCount)/2;
+		System.out.println(average);
+		
+		steeringMotor.rotateTo(average);
+		steeringMotor.resetTachoCount();
+	
+	}
 	
 	public static void main(String[] args) {
 //Declarations
@@ -78,6 +110,8 @@ public class Activity1 {
 		final int ANGLE_ERROR_MARGIN = 5;
 		
 //Set-up
+		align();
+		
 		System.out.println("Calibrating gyro...ROBOT MUST BE MOTIONLESS");
 		gyro = new EV3GyroSensor(SensorPort.S1);
 		Delay.msDelay(2500);
