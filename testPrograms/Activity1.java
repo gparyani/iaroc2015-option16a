@@ -55,12 +55,12 @@ public class Activity1 {
 				trueMultiplier = MULTIPLIER;
 				break;
 			case Turning_Left:
-				steeringMotor.rotateTo(-90);
+				steeringMotor.rotateTo(-180);
 				rightMotor.forward();
 				leftMotor.forward();
 				break;
 			case Turning_Right:
-				steeringMotor.rotateTo(90);
+				steeringMotor.rotateTo(180);
 				rightMotor.forward();
 				leftMotor.forward();
 			default:
@@ -85,7 +85,7 @@ public class Activity1 {
 		
 		do
 		{
-			steeringMotor.setSpeed(120);
+			steeringMotor.setSpeed(200);
 			steeringMotor.backward();
 		}
 		while(steeringMotor.isStalled() != true);
@@ -154,57 +154,88 @@ public class Activity1 {
 			leftSense.fetchSample(lSample, 0);
 			tachoReading = leftMotor.getTachoCount(); //TachoCount will get lower when moving backwards
 			System.out.println("After getting values at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
-			if(getStatus() == Status.Forward)
-			{
+			switch(getStatus()){
+			case Backward:
+				tachoReading = leftMotor.getTachoCount();
+				if(tachoReading == 0)
+				{
+					setStatus(Status.Forward);
+				}
+				angleSense.fetchSample(gyroAngle, 0);
+				if(gyroAngle[0] < -1 * ANGLE_ERROR_MARGIN || gyroAngle[0] > ANGLE_ERROR_MARGIN)	//too much to the right
+					steeringMotor.rotateTo((int) (trueMultiplier * gyroAngle[0]));
+				else
+					steeringMotor.rotateTo(0);
+				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
+				break;
+			case Forward:
 				temp.fetchSample(distances, 0);
 				System.out.println("Distance:\t" + distances[0]);
 				if(distances[0]<20)
 				{
 					setStatus(Status.Backward);
 				}
+				if(rSample[0]>1.0)
+				{
+					setStatus(Status.Turning_Right);
+					System.out.println("Turning Right " + i);
+				}
+				else if(lSample[0]>1.0)
+				{
+					setStatus(Status.Turning_Left);
+					System.out.println("Turning Left " + i);
+				}
+				angleSense.fetchSample(gyroAngle, 0);
 				if(gyroAngle[0] < -1 * ANGLE_ERROR_MARGIN || gyroAngle[0] > ANGLE_ERROR_MARGIN)	//too much to the right
 					steeringMotor.rotateTo((int) (trueMultiplier * gyroAngle[0]));
 				else
 					steeringMotor.rotateTo(0);
 				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
-			}
-			else
-			{
-				tachoReading = leftMotor.getTachoCount();
-				if(tachoReading == 0)
-				{
-					setStatus(Status.Forward);
-				}
-				if(gyroAngle[0] < -1 * ANGLE_ERROR_MARGIN || gyroAngle[0] > ANGLE_ERROR_MARGIN)	//too much to the right
-					steeringMotor.rotateTo((int) (trueMultiplier * gyroAngle[0]));
-				else
-					steeringMotor.rotateTo(0);
-				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
-			}
-			System.out.println("After changing states at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
-			angleSense.fetchSample(gyroAngle, 0);
-			if(rSample[0]>1.0)
-			{
-				float endAngle = gyroAngle[0]-90;
-				setStatus(Status.Turning_Right);
-				System.out.println("Turning Right " + i);
-				if(gyroAngle[0]<endAngle)
-				{
-					setStatus(Status.Forward);
-					System.out.println("Moving Forward " + i);
-				}
-			}
-			if(lSample[0]>1.0)
-			{
+				break;
+			case Turning_Left:
+				angleSense.fetchSample(gyroAngle, 0);
 				float endAngle = gyroAngle[0]+90;
-				setStatus(Status.Turning_Left);
-				System.out.println("Turning Left " + i);
 				if(gyroAngle[0]>endAngle)
 				{
 					setStatus(Status.Forward);
 					System.out.println("Moving Forward " + i);
 				}
+				break;
+			case Turning_Right:
+				angleSense.fetchSample(gyroAngle, 0);
+				endAngle = gyroAngle[0]-90;
+				if(gyroAngle[0]<endAngle)
+				{
+					setStatus(Status.Forward);
+					System.out.println("Moving Forward " + i);
+				}
+				break;
+			default:
+				break;
 			}
+			System.out.println("After changing states at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
+//			if(rSample[0]>1.0)
+//			{
+//				float endAngle = gyroAngle[0]-90;
+//				setStatus(Status.Turning_Right);
+//				System.out.println("Turning Right " + i);
+//				if(gyroAngle[0]<endAngle)
+//				{
+//					setStatus(Status.Forward);
+//					System.out.println("Moving Forward " + i);
+//				}
+//			}
+//			if(lSample[0]>1.0)
+//			{
+//				float endAngle = gyroAngle[0]+90;
+//				setStatus(Status.Turning_Left);
+//				System.out.println("Turning Left " + i);
+//				if(gyroAngle[0]>endAngle)
+//				{
+//					setStatus(Status.Forward);
+//					System.out.println("Moving Forward " + i);
+//				}
+//			}
 //			System.out.println("After beeping at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
 			
 		}
