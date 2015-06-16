@@ -177,7 +177,7 @@ public class Activity1 {
 					steeringMotor.rotateTo((int) (trueMultiplier * gyroAngle[0]));
 				else
 					steeringMotor.rotateTo(0);
-//				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
+				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
 				tachoReading = leftMotor.getTachoCount();
 				if(rSample[0]>spaceDist && rSample[0] != Float.POSITIVE_INFINITY)
 				{
@@ -187,11 +187,6 @@ public class Activity1 {
 					endAngle = gyroAngle[0]-90;
 					
 				}
-				if(tachoReading == 0)
-				{
-					setStatus(Status.Forward);
-				}
-				break;
 			case Forward:
 				temp.fetchSample(distances, 0);
 				System.out.println("Distance:\t" + distances[0]);
@@ -201,8 +196,9 @@ public class Activity1 {
 				else
 					steeringMotor.rotateTo(0);
 //				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
-				if(distances[0]<20)
+				if(distances[0]<25)
 				{
+					System.out.println("Moving Backward " + i);
 					setStatus(Status.Backward);
 				}
 				else if(lSample[0]>spaceDist && lSample[0] != Float.POSITIVE_INFINITY)
@@ -236,31 +232,6 @@ public class Activity1 {
 			default:
 				break;
 			}
-//			System.out.println("After changing states at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
-//			if(rSample[0]>1.0)
-//			{
-//				float endAngle = gyroAngle[0]-90;
-//				setStatus(Status.Turning_Right);
-//				System.out.println("Turning Right " + i);
-//				if(gyroAngle[0]<endAngle)
-//				{
-//					setStatus(Status.Forward);
-//					System.out.println("Moving Forward " + i);
-//				}
-//			}
-//			if(lSample[0]>1.0)
-//			{
-//				float endAngle = gyroAngle[0]+90;
-//				setStatus(Status.Turning_Left);
-//				System.out.println("Turning Left " + i);
-//				if(gyroAngle[0]>endAngle)
-//				{
-//					setStatus(Status.Forward);
-//					System.out.println("Moving Forward " + i);
-//				}
-//			}
-//			System.out.println("After beeping at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
-			
 		}
 	}
 }
