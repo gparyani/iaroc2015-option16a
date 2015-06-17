@@ -36,6 +36,10 @@ public class Activity1 {
 	static float[] gyroAngles = new float[1];
 	static float endAngle = 0;
 	static float spaceDist;
+	static double realX = 0;
+	static double realY = 0;
+	static int lPrevTacho = 0;
+	static int rPrevTacho = 0;
 	static EV3GyroSensor gyro;
 	static long beginningTime;
 	static SampleProvider rightSense;
@@ -134,6 +138,8 @@ public class Activity1 {
 		
 		setStatus(Status.Forward);
 		
+		startLocationMode();
+		
 		beginningTime = System.nanoTime();
 		
 //Loop Function
@@ -142,7 +148,7 @@ public class Activity1 {
 			
 //Update Sensors
 			
-			System.out.println("Right sense: "+rSamples[0]+" Left sense: " + lSamples[0]);
+//			System.out.println("Right sense: "+rSamples[0]+" Left sense: " + lSamples[0]);
 //			tachoReading = leftMotor.getTachoCount(); //TachoCount will get lower when moving backwards
 //			System.out.println("After getting values at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
 //			Left Following Strategy
@@ -156,7 +162,7 @@ public class Activity1 {
 				if(rSamples[0]>spaceDist)
 				{
 					setStatus(Status.Turning_Right);
-					System.out.println("Turning Right " + i);
+//					System.out.println("Turning Right " + i);
 					angleSense.fetchSample(gyroAngles, 0);
 					
 				}
@@ -166,38 +172,38 @@ public class Activity1 {
 				rightSense.fetchSample(rSamples, 0);
 				leftSense.fetchSample(lSamples, 0);
 				frontSense.fetchSample(frontSamples, 0);
-				System.out.println("Distance:\t" + frontSamples[0]);
+//				System.out.println("Distance:\t" + frontSamples[0]);
 //				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
 				if(lSamples[0]>spaceDist)
 				{
 					setStatus(Status.Turning_Left);
-					System.out.println("Turning Left " + i);
+//					System.out.println("Turning Left " + i);
 					angleSense.fetchSample(gyroAngles, 0);
 				}
 				else if(frontSamples[0]<20)
 				{
-					System.out.println("Moving Backward " + i);
+//					System.out.println("Moving Backward " + i);
 					setStatus(Status.Backward);
 				}
 				break;
 			case Turning_Left:
 				angleSense.fetchSample(gyroAngles, 0);
-				System.out.println("Current Angle: " + gyroAngles[0]);
-				System.out.println("Desired Angle: " + endAngle);
+//				System.out.println("Current Angle: " + gyroAngles[0]);
+//				System.out.println("Desired Angle: " + endAngle);
 				if(gyroAngles[0] >= (endAngle - ANGLE_ERROR_MARGIN))
 				{
 					setStatus(Status.Forward);
-					System.out.println("Moving Forward " + i);
+//					System.out.println("Moving Forward " + i);
 				}
 				break;
 			case Turning_Right:
 				angleSense.fetchSample(gyroAngles, 0);
-				System.out.println("Current Angle: " + gyroAngles[0]);
-				System.out.println("Desired Angle: " + endAngle);
+//				System.out.println("Current Angle: " + gyroAngles[0]);
+//				System.out.println("Desired Angle: " + endAngle);
 				if(gyroAngles[0] <= (endAngle + ANGLE_ERROR_MARGIN))
 				{
 					setStatus(Status.Forward);
-					System.out.println("Moving Forward " + i);
+//					System.out.println("Moving Forward " + i);
 				}
 				break;
 			default:
@@ -261,5 +267,29 @@ public class Activity1 {
 		leftMotor.setSpeed(120);
 		rightMotor.setSpeed(120);
 		steeringMotor.setSpeed(steeringMotor.getMaxSpeed());
+	}
+	private static synchronized void updateLocation() {
+		int lTachoDelta, rTachoDelta;
+		double xDelta, yDelta;
+		double gyroRadians;
+		lTachoDelta = leftMotor.getTachoCount() - lPrevTacho;
+		rTachoDelta = rightMotor.getTachoCount() - rPrevTacho;
+		lPrevTacho += lTachoDelta;
+		rPrevTacho += rTachoDelta;
+		angleSense.fetchSample(gyroAngles, 0);
+		gyroRadians = Math.toRadians(gyroAngles[0] + 90);
+		xDelta = ((lTachoDelta+rTachoDelta)/2) * (100/412) * Math.cos(gyroRadians);
+		yDelta = ((lTachoDelta+rTachoDelta)/2) * (100.412) * Math.sin(gyroRadians);
+		realX += xDelta;
+		realY += yDelta;
+	}
+	private static void startLocationMode() {
+		new Thread(new Runnable()  {
+			public void run()
+			{
+				updateLocation();
+				System.out.println(getStatus().toString()+", x: "+realX + ", y: " +realY);
+			}
+		}).start();
 	}
 }
