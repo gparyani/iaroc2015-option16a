@@ -1,7 +1,6 @@
 package testPrograms;
 
 import lejos.hardware.Button;
-import lejos.hardware.Sound;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 import lejos.hardware.motor.EV3MediumRegulatedMotor;
 import lejos.hardware.port.MotorPort;
@@ -31,7 +30,7 @@ public class Activity1 {
 	
 	private static Status currentStatus;
 	static int ANGLE_ERROR_MARGIN = 5;
-	static float[] distances = new float[1];
+	static float[] frontSamples = new float[1];
 	static float[] rSamples = new float[1];
 	static float[] lSamples = new float[1];
 	static float[] gyroAngles = new float[1];
@@ -42,7 +41,7 @@ public class Activity1 {
 	static SampleProvider rightSense;
 	static SampleProvider leftSense;
 	static SampleProvider angleSense;
-	static SensorMode temp;
+	static SensorMode frontSense;
 	
 	public static Status getStatus()
 	{
@@ -53,6 +52,7 @@ public class Activity1 {
 	{
 		if( newStatus != currentStatus)
 		{
+			System.out.println("State transition: " + newStatus);
 			leftMotor.stop();
 			rightMotor.stop();
 			switch(newStatus){
@@ -72,11 +72,13 @@ public class Activity1 {
 				steeringMotor.rotateTo(-(steeringRange/2));
 				rightMotor.forward();
 				leftMotor.forward();
+				endAngle = gyroAngles[0]+90;
 				break;
 			case Turning_Right:
 				steeringMotor.rotateTo(steeringRange/2);
 				rightMotor.forward();
 				leftMotor.forward();
+				endAngle = gyroAngles[0]-90;
 			default:
 				break;
 			}
@@ -140,36 +142,27 @@ public class Activity1 {
 //			Left Following Strategy
 			switch(getStatus()){
 			case Backward:
+				correctVeer();
 				rightSense.fetchSample(rSamples, 0);
 				leftSense.fetchSample(lSamples, 0);
-				angleSense.fetchSample(gyroAngles, 0);
-				if(gyroAngles[0] < -1 * ANGLE_ERROR_MARGIN || gyroAngles[0] > ANGLE_ERROR_MARGIN)	//too much to the right
-					steeringMotor.rotateTo((int) (trueMultiplier * gyroAngles[0]));
-				else
-					steeringMotor.rotateTo(0);
-				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
+//				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
 //				tachoReading = leftMotor.getTachoCount();
 				if(rSamples[0]>spaceDist && rSamples[0] != Float.POSITIVE_INFINITY)
 				{
 					setStatus(Status.Turning_Right);
 					System.out.println("Turning Right " + i);
 					angleSense.fetchSample(gyroAngles, 0);
-					endAngle = gyroAngles[0]-90;
 					
 				}
 				break;
 			case Forward:
+				correctVeer();
 				rightSense.fetchSample(rSamples, 0);
 				leftSense.fetchSample(lSamples, 0);
-				temp.fetchSample(distances, 0);
-				System.out.println("Distance:\t" + distances[0]);
-				angleSense.fetchSample(gyroAngles, 0);
-				if(gyroAngles[0] < -1 * ANGLE_ERROR_MARGIN || gyroAngles[0] > ANGLE_ERROR_MARGIN)	//too much to the right
-					steeringMotor.rotateTo((int) (trueMultiplier * gyroAngles[0]));
-				else
-					steeringMotor.rotateTo(0);
+				frontSense.fetchSample(frontSamples, 0);
+				System.out.println("Distance:\t" + frontSamples[0]);
 //				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
-				if(distances[0]<25)
+				if(frontSamples[0]<20)
 				{
 					System.out.println("Moving Backward " + i);
 					setStatus(Status.Backward);
@@ -179,14 +172,13 @@ public class Activity1 {
 					setStatus(Status.Turning_Left);
 					System.out.println("Turning Left " + i);
 					angleSense.fetchSample(gyroAngles, 0);
-					endAngle = gyroAngles[0]+90;
 				}
 				break;
 			case Turning_Left:
 				angleSense.fetchSample(gyroAngles, 0);
 				System.out.println("Current Angle: " + gyroAngles[0]);
 				System.out.println("Desired Angle: " + endAngle);
-				if(gyroAngles[0]>endAngle)
+				if(gyroAngles[0] >= (endAngle - ANGLE_ERROR_MARGIN))
 				{
 					setStatus(Status.Forward);
 					System.out.println("Moving Forward " + i);
@@ -196,7 +188,7 @@ public class Activity1 {
 				angleSense.fetchSample(gyroAngles, 0);
 				System.out.println("Current Angle: " + gyroAngles[0]);
 				System.out.println("Desired Angle: " + endAngle);
-				if(gyroAngles[0]<endAngle)
+				if(gyroAngles[0] <= (endAngle + ANGLE_ERROR_MARGIN))
 				{
 					setStatus(Status.Forward);
 					System.out.println("Moving Forward " + i);
@@ -206,6 +198,15 @@ public class Activity1 {
 				break;
 			}
 		}
+	}
+
+	private static void correctVeer() {
+		angleSense.fetchSample(gyroAngles, 0);
+		if(gyroAngles[0] < (endAngle - ANGLE_ERROR_MARGIN) || gyroAngles[0] > (endAngle + ANGLE_ERROR_MARGIN))
+			steeringMotor.rotateTo((int) (trueMultiplier * (gyroAngles[0] - endAngle)));
+		else
+			steeringMotor.rotateTo(0);
+		
 	}
 
 	private static void setExitMode() {
@@ -220,6 +221,7 @@ public class Activity1 {
 
 	private static void calibrateGyro() {
 		System.out.println("Calibrating gyro...ROBOT MUST BE MOTIONLESS");
+		Delay.msDelay(200);
 		gyro = new EV3GyroSensor(SensorPort.S1);
 		Delay.msDelay(2000);
 		System.out.println("Calibration complete!");
@@ -239,7 +241,7 @@ public class Activity1 {
 		System.out.println("Left Space: " + leftDist);
 		System.out.println("Right Space: " + rightDist);
 		System.out.println("Total Space:" + spaceDist);
-		temp = irSensor.getDistanceMode();
+		frontSense = irSensor.getDistanceMode();
 		rightSensor.enable();
 		leftSensor.enable();
 		rightSense = rightSensor.getDistanceMode();
