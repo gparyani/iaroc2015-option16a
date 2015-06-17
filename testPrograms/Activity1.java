@@ -162,16 +162,16 @@ public class Activity1 {
 				frontSense.fetchSample(frontSamples, 0);
 				System.out.println("Distance:\t" + frontSamples[0]);
 //				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
-				if(frontSamples[0]<20)
-				{
-					System.out.println("Moving Backward " + i);
-					setStatus(Status.Backward);
-				}
-				else if(lSamples[0]>spaceDist && lSamples[0] != Float.POSITIVE_INFINITY)
+				if(lSamples[0]>spaceDist && lSamples[0] != Float.POSITIVE_INFINITY)
 				{
 					setStatus(Status.Turning_Left);
 					System.out.println("Turning Left " + i);
 					angleSense.fetchSample(gyroAngles, 0);
+				}
+				else if(frontSamples[0]<20)
+				{
+					System.out.println("Moving Backward " + i);
+					setStatus(Status.Backward);
 				}
 				break;
 			case Turning_Left:
