@@ -69,12 +69,18 @@ public class Activity1 {
 				trueMultiplier = MULTIPLIER;
 				break;
 			case Turning_Left:
+				steeringMotor.rotateTo(steeringRange / 2);
+				rightMotor.rotate(-60, true);
+				leftMotor.rotate(-60);
 				steeringMotor.rotateTo(-(steeringRange/2));
 				rightMotor.forward();
 				leftMotor.forward();
 				endAngle = gyroAngles[0]+90;
 				break;
 			case Turning_Right:
+				steeringMotor.rotateTo(-steeringRange / 2);
+				rightMotor.rotate(-60, true);
+				leftMotor.rotate(-60);
 				steeringMotor.rotateTo(steeringRange/2);
 				rightMotor.forward();
 				leftMotor.forward();
@@ -147,7 +153,7 @@ public class Activity1 {
 				leftSense.fetchSample(lSamples, 0);
 //				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
 //				tachoReading = leftMotor.getTachoCount();
-				if(rSamples[0]>spaceDist && rSamples[0] != Float.POSITIVE_INFINITY)
+				if(rSamples[0]>spaceDist)
 				{
 					setStatus(Status.Turning_Right);
 					System.out.println("Turning Right " + i);
@@ -162,7 +168,7 @@ public class Activity1 {
 				frontSense.fetchSample(frontSamples, 0);
 				System.out.println("Distance:\t" + frontSamples[0]);
 //				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
-				if(lSamples[0]>spaceDist && lSamples[0] != Float.POSITIVE_INFINITY)
+				if(lSamples[0]>spaceDist)
 				{
 					setStatus(Status.Turning_Left);
 					System.out.println("Turning Left " + i);
@@ -237,7 +243,7 @@ public class Activity1 {
 		float leftDist = lSamples[0];
 		rightSensor.fetchSample(rSamples, 0);
 		float rightDist = rSamples[0];
-		spaceDist = leftDist + rightDist;
+		spaceDist = leftDist + rightDist + 19;
 		System.out.println("Left Space: " + leftDist);
 		System.out.println("Right Space: " + rightDist);
 		System.out.println("Total Space:" + spaceDist);
