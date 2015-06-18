@@ -21,7 +21,7 @@ public class Activity1 {
 	static NXTUltrasonicSensor leftSensor;
 	static EV3IRSensor irSensor;
 	static int steeringRange;
-	static final int MULTIPLIER = 2;
+	static final int MULTIPLIER = 4;
 	static int trueMultiplier = MULTIPLIER;
 
 	public enum Status{
@@ -36,8 +36,8 @@ public class Activity1 {
 	static float[] gyroAngles = new float[1];
 	static float endAngle = 0;
 	static float spaceDist;
-	static double realX = 0;
-	static double realY = 0;
+	static volatile double realX = 0;
+	static volatile double realY = 0;
 	static int lPrevTacho = 0;
 	static int rPrevTacho = 0;
 	static EV3GyroSensor gyro;
@@ -46,6 +46,7 @@ public class Activity1 {
 	static SampleProvider leftSense;
 	static SampleProvider angleSense;
 	static SensorMode frontSense;
+	static int steerPos = 0;
 	
 	public static Status getStatus()
 	{
@@ -73,19 +74,19 @@ public class Activity1 {
 				trueMultiplier = MULTIPLIER;
 				break;
 			case Turning_Left:
-				steeringMotor.rotateTo(steeringRange / 2);
+				steeringMotor.rotateTo(steeringRange / 3);
 				rightMotor.rotate(-60, true);
 				leftMotor.rotate(-60);
-				steeringMotor.rotateTo(-(steeringRange/2));
+				steeringMotor.rotateTo(-(steeringRange/3));
 				rightMotor.forward();
 				leftMotor.forward();
 				endAngle = gyroAngles[0]+90;
 				break;
 			case Turning_Right:
-				steeringMotor.rotateTo(-steeringRange / 2);
+				steeringMotor.rotateTo(-steeringRange / 3);
 				rightMotor.rotate(-60, true);
 				leftMotor.rotate(-60);
-				steeringMotor.rotateTo(steeringRange/2);
+				steeringMotor.rotateTo(steeringRange/3);
 				rightMotor.forward();
 				leftMotor.forward();
 				endAngle = gyroAngles[0]-90;
@@ -126,7 +127,7 @@ public class Activity1 {
 	}
 	
 	public static void main(String[] args) {
-		setExitMode();
+//		setExitMode();
 		
 		initializeMotors();
 		
@@ -154,9 +155,9 @@ public class Activity1 {
 //			Left Following Strategy
 			switch(getStatus()){
 			case Backward:
-				correctVeer();
 				rightSense.fetchSample(rSamples, 0);
 				leftSense.fetchSample(lSamples, 0);
+				correctVeer();
 //				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
 //				tachoReading = leftMotor.getTachoCount();
 				if(rSamples[0]>spaceDist)
@@ -168,9 +169,9 @@ public class Activity1 {
 				}
 				break;
 			case Forward:
-				correctVeer();
 				rightSense.fetchSample(rSamples, 0);
 				leftSense.fetchSample(lSamples, 0);
+				correctVeer();
 				frontSense.fetchSample(frontSamples, 0);
 //				System.out.println("Distance:\t" + frontSamples[0]);
 //				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
@@ -190,7 +191,7 @@ public class Activity1 {
 				angleSense.fetchSample(gyroAngles, 0);
 //				System.out.println("Current Angle: " + gyroAngles[0]);
 //				System.out.println("Desired Angle: " + endAngle);
-				if(gyroAngles[0] >= (endAngle - ANGLE_ERROR_MARGIN))
+				if(gyroAngles[0] >= (endAngle - (4*ANGLE_ERROR_MARGIN)))
 				{
 					setStatus(Status.Forward);
 //					System.out.println("Moving Forward " + i);
@@ -200,7 +201,7 @@ public class Activity1 {
 				angleSense.fetchSample(gyroAngles, 0);
 //				System.out.println("Current Angle: " + gyroAngles[0]);
 //				System.out.println("Desired Angle: " + endAngle);
-				if(gyroAngles[0] <= (endAngle + ANGLE_ERROR_MARGIN))
+				if(gyroAngles[0] <= (endAngle + (4 *ANGLE_ERROR_MARGIN)))
 				{
 					setStatus(Status.Forward);
 //					System.out.println("Moving Forward " + i);
@@ -210,14 +211,35 @@ public class Activity1 {
 				break;
 			}
 		}
+		
 	}
 
 	private static void correctVeer() {
-		angleSense.fetchSample(gyroAngles, 0);
-		if(gyroAngles[0] < (endAngle - ANGLE_ERROR_MARGIN) || gyroAngles[0] > (endAngle + ANGLE_ERROR_MARGIN))
-			steeringMotor.rotateTo((int) (trueMultiplier * (gyroAngles[0] - endAngle)));
+		int newSteerPos;
+		if( lSamples[0] < 0.1f )
+		{
+			newSteerPos = -10;
+		}
+		else if( rSamples[0] < 0.1f )
+		{
+			newSteerPos = 10;
+		}
 		else
-			steeringMotor.rotateTo(0);
+		{
+			angleSense.fetchSample(gyroAngles, 0);
+			if(gyroAngles[0] < (endAngle - ANGLE_ERROR_MARGIN) || gyroAngles[0] > (endAngle + ANGLE_ERROR_MARGIN))
+				newSteerPos = (int) (trueMultiplier * (gyroAngles[0] - endAngle));
+			else
+				newSteerPos = 0;
+		}
+		
+		System.out.println("Steering to " + steerPos);
+		
+		if( steerPos != newSteerPos )
+		{
+			steeringMotor.rotateTo( newSteerPos );
+			steerPos = newSteerPos;
+		}
 		
 	}
 
@@ -225,7 +247,7 @@ public class Activity1 {
 		new Thread(new Runnable() {
 			public void run()
 			{
-				Button.waitForAnyPress();
+				while(Button.ESCAPE.isUp());
 				System.exit(0);
 			}
 		}).start();
@@ -249,7 +271,7 @@ public class Activity1 {
 		float leftDist = lSamples[0];
 		rightSensor.fetchSample(rSamples, 0);
 		float rightDist = rSamples[0];
-		spaceDist = leftDist + rightDist + 19;
+		spaceDist = leftDist + rightDist + 0.19f;
 		System.out.println("Left Space: " + leftDist);
 		System.out.println("Right Space: " + rightDist);
 		System.out.println("Total Space:" + spaceDist);
@@ -268,8 +290,9 @@ public class Activity1 {
 		rightMotor.setSpeed(120);
 		steeringMotor.setSpeed(steeringMotor.getMaxSpeed());
 	}
-	private static synchronized void updateLocation() {
+	private static void updateLocation() {
 		int lTachoDelta, rTachoDelta;
+		double avgDelta;
 		double xDelta, yDelta;
 		double gyroRadians;
 		lTachoDelta = leftMotor.getTachoCount() - lPrevTacho;
@@ -278,18 +301,24 @@ public class Activity1 {
 		rPrevTacho += rTachoDelta;
 		angleSense.fetchSample(gyroAngles, 0);
 		gyroRadians = Math.toRadians(gyroAngles[0] + 90);
-		xDelta = ((lTachoDelta+rTachoDelta)/2) * (100/412) * Math.cos(gyroRadians);
-		yDelta = ((lTachoDelta+rTachoDelta)/2) * (100.412) * Math.sin(gyroRadians);
+		avgDelta = (lTachoDelta+rTachoDelta)/2.0;
+		xDelta = (avgDelta) * (1.0/412.0) * Math.cos(gyroRadians);
+		yDelta = (avgDelta) * (1.0/412.0) * Math.sin(gyroRadians);
 		realX += xDelta;
 		realY += yDelta;
 	}
 	private static void startLocationMode() {
-		new Thread(new Runnable()  {
+		Thread t = new Thread(new Runnable()  {
 			public void run()
 			{
-				updateLocation();
-				System.out.println(getStatus().toString()+", x: "+realX + ", y: " +realY);
+				while( true )
+				{
+					updateLocation();
+					System.out.println(getStatus().toString()+", x: "+realX + ", y: " +realY + " left: " + lSamples[0] + " right: " + rSamples[0] );
+				}
 			}
-		}).start();
+		});
+//		t.setPriority(Thread.MAX_PRIORITY);
+		t.start();
 	}
 }
