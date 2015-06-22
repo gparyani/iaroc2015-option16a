@@ -34,7 +34,7 @@ public class Activity1 {
 	static float[] rSamples = new float[1];
 	static float[] lSamples = new float[1];
 	static float[] gyroAngles = new float[1];
-	static float endAngle = 0;
+	static int endAngle = 0;
 	static float spaceDist;
 	static volatile double realX = 0;
 	static volatile double realY = 0;
@@ -75,21 +75,21 @@ public class Activity1 {
 				break;
 			case Turning_Left:
 				steeringMotor.rotateTo(steeringRange / 3);
-				rightMotor.rotate(-60, true);
-				leftMotor.rotate(-60);
+				rightMotor.rotate(-90, true);
+				leftMotor.rotate(-90);
 				steeringMotor.rotateTo(-(steeringRange/3));
 				rightMotor.forward();
 				leftMotor.forward();
-				endAngle = gyroAngles[0]+90;
+				endAngle = correctAngle(gyroAngles[0])+90;
 				break;
 			case Turning_Right:
 				steeringMotor.rotateTo(-steeringRange / 3);
-				rightMotor.rotate(-60, true);
-				leftMotor.rotate(-60);
+				rightMotor.rotate(-90, true);
+				leftMotor.rotate(-90);
 				steeringMotor.rotateTo(steeringRange/3);
 				rightMotor.forward();
 				leftMotor.forward();
-				endAngle = gyroAngles[0]-90;
+				endAngle = correctAngle(gyroAngles[0])-90;
 			default:
 				break;
 			}
@@ -127,7 +127,7 @@ public class Activity1 {
 	}
 	
 	public static void main(String[] args) {
-//		setExitMode();
+		setExitMode();
 		
 		initializeMotors();
 		
@@ -149,7 +149,6 @@ public class Activity1 {
 			
 //Update Sensors
 			
-//			System.out.println("Right sense: "+rSamples[0]+" Left sense: " + lSamples[0]);
 //			tachoReading = leftMotor.getTachoCount(); //TachoCount will get lower when moving backwards
 //			System.out.println("After getting values at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
 //			Left Following Strategy
@@ -157,15 +156,22 @@ public class Activity1 {
 			case Backward:
 				rightSense.fetchSample(rSamples, 0);
 				leftSense.fetchSample(lSamples, 0);
+//				angleSense.fetchSample(gyroAngles, 0);
+//				System.out.println("Current Gyro Angle: " + gyroAngles[0]);
 				correctVeer();
 //				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
 //				tachoReading = leftMotor.getTachoCount();
 				if(rSamples[0]>spaceDist)
 				{
+					System.out.println("Right sense: "+rSamples[0]+" Left sense: " + lSamples[0]);
 					setStatus(Status.Turning_Right);
-//					System.out.println("Turning Right " + i);
+//					System.out.println("End Angle: " + endAngle);
 					angleSense.fetchSample(gyroAngles, 0);
 					
+				}
+				else if(leftMotor.isStalled() && rightMotor.isStalled())
+				{
+					setStatus(Status.Forward);
 				}
 				break;
 			case Forward:
@@ -177,11 +183,12 @@ public class Activity1 {
 //				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
 				if(lSamples[0]>spaceDist)
 				{
+					System.out.println("Right sense: "+rSamples[0]+" Left sense: " + lSamples[0]);
 					setStatus(Status.Turning_Left);
-//					System.out.println("Turning Left " + i);
+					System.out.println("End Angle: " + endAngle);
 					angleSense.fetchSample(gyroAngles, 0);
 				}
-				else if(frontSamples[0]<20)
+				else if(frontSamples[0]<30)
 				{
 //					System.out.println("Moving Backward " + i);
 					setStatus(Status.Backward);
@@ -271,7 +278,7 @@ public class Activity1 {
 		float leftDist = lSamples[0];
 		rightSensor.fetchSample(rSamples, 0);
 		float rightDist = rSamples[0];
-		spaceDist = leftDist + rightDist + 0.19f;
+		spaceDist = leftDist + rightDist + 0.19f+0.0762f; //19=robot + 0.0762 = wall width
 		System.out.println("Left Space: " + leftDist);
 		System.out.println("Right Space: " + rightDist);
 		System.out.println("Total Space:" + spaceDist);
@@ -314,11 +321,34 @@ public class Activity1 {
 				while( true )
 				{
 					updateLocation();
-					System.out.println(getStatus().toString()+", x: "+realX + ", y: " +realY + " left: " + lSamples[0] + " right: " + rSamples[0] );
+//					System.out.println(getStatus().toString()+", x: "+realX + ", y: " +realY + " left: " + lSamples[0] + " right: " + rSamples[0] );
 				}
 			}
 		});
 //		t.setPriority(Thread.MAX_PRIORITY);
 		t.start();
+	}
+	
+	private static int correctAngle(float angleEstimate)
+	{
+		float quotient;
+		float remainder;
+		quotient = angleEstimate/90;
+		remainder = angleEstimate%90;
+		if(remainder>=0)
+		{
+			if(remainder>=45)
+			{
+				quotient+=1;
+			}	
+		}
+		else
+		{
+			if(remainder<=-45)
+			{
+				quotient-=1;
+			}
+		}
+		return (int)quotient*90;
 	}
 }
