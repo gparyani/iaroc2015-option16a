@@ -3,6 +3,7 @@ package missions;
 import java.util.HashSet;
 
 import lejos.hardware.Button;
+import lejos.hardware.Sound;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 import lejos.hardware.motor.EV3MediumRegulatedMotor;
 import lejos.hardware.port.MotorPort;
@@ -25,6 +26,7 @@ public class MarsNavigation {
 	static int steeringRange;
 	static final int MULTIPLIER = 4;
 	static int trueMultiplier = MULTIPLIER;
+
 
 	public enum Status{
 		Forward, Backward, Turning_Left, Turning_Right;
@@ -221,16 +223,100 @@ public class MarsNavigation {
 		alignSteering();
 		
 		calibrateGyro();
-		
-		setStatus(Status.Forward);
-		
-		startLocationMode();
-		
+			
 		beginningTime = System.nanoTime();
 		
 //Loop Function
-		for(int i = 1; true; ++i)
+		Sound.beep();
+		System.out.println("Calibration complete");
+		
+		do
 		{
+			rightMotor.stop();
+			leftMotor.stop();
+		}
+		while(Button.LEFT.isUp() && Button.RIGHT.isUp());
+	
+		
+		if(Button.LEFT.isDown())
+		{
+			
+			int reading = rightMotor.getTachoCount();
+					
+			float rMax = rightMotor.getMaxSpeed();
+			float lMax = leftMotor.getMaxSpeed();
+			
+			
+			rightMotor.forward();
+			leftMotor.forward();
+			
+			do
+			{
+				 
+				frontSense.fetchSample(frontSamples, 0);
+				
+				System.out.println(frontSamples[0]);
+											
+			}
+			while(frontSamples[0] > 50);	
+			
+			
+			rightMotor.setSpeed(rMax/2);
+			leftMotor.setSpeed(lMax/2);
+			rightMotor.forward();
+			leftMotor.forward();
+			
+			do
+			{
+				System.out.println("Slower");
+			}
+			while(rightMotor.isStalled() != true);
+			//Errors somewhere after this line
+			System.out.println("is stalled");	
+			
+			rightMotor.stop();
+			leftMotor.stop();
+			Delay.msDelay(1000); //DELETE DELAY LATER
+			
+			System.out.println("finished delay"); 
+			
+			rightMotor.setSpeed(rMax);
+			leftMotor.setSpeed(lMax);
+			System.out.println("Speed set");
+			
+			rightMotor.backward();
+			leftMotor.backward(); //CORRECT VEER ON WAY BACK
+			System.out.println("Moving backwards"); 
+			
+			while(reading > 0)
+			{
+				reading = rightMotor.getTachoCount();
+				System.out.println(reading);
+				
+				if(reading < 412) //1 meter
+				{
+					rightMotor.setSpeed(rMax/2); //sets speed too often?
+					leftMotor.setSpeed(lMax/2);
+					System.out.println("slowing");
+				}
+				
+			}
+			
+			rightMotor.stop();
+			leftMotor.stop();
+		
+			
+			}
+		
+		
+		else if(Button.RIGHT.isDown())
+		{
+			startLocationMode();
+
+			setStatus(Status.Forward);
+				
+			for(int i = 1; true; ++i)
+			{
 			
 //Update Sensors
 			
@@ -352,7 +438,12 @@ public class MarsNavigation {
 			}
 			
 			System.out.println(Cell.getCurrentCell());
+			}
+		
 		}
+		
+		
+		
 		
 	}
 
