@@ -77,8 +77,8 @@ public class MarsNavigation {
 				break;
 			case Turning_Left:
 				steeringMotor.rotateTo(steeringRange / 3);
-				rightMotor.rotate(-90, true);
-				leftMotor.rotate(-90);
+				rightMotor.rotate(-75, true);
+				leftMotor.rotate(-75);
 				steeringMotor.rotateTo(-(steeringRange/3));
 				rightMotor.forward();
 				leftMotor.forward();
@@ -86,8 +86,8 @@ public class MarsNavigation {
 				break;
 			case Turning_Right:
 				steeringMotor.rotateTo(-steeringRange / 3);
-				rightMotor.rotate(-90, true);
-				leftMotor.rotate(-90);
+				rightMotor.rotate(-75, true);
+				leftMotor.rotate(-75);
 				steeringMotor.rotateTo(steeringRange/3);
 				rightMotor.forward();
 				leftMotor.forward();
@@ -240,17 +240,39 @@ public class MarsNavigation {
 			switch(getStatus()){
 			case Backward:
 				rightSense.fetchSample(rSamples, 0);
-				leftSense.fetchSample(lSamples, 0);
 //				angleSense.fetchSample(gyroAngles, 0);
 //				System.out.println("Current Gyro Angle: " + gyroAngles[0]);
 				correctVeer();
 //				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
 //				tachoReading = leftMotor.getTachoCount();
-				if(rSamples[0]>spaceDist)
+				if(rSamples[0] == Float.POSITIVE_INFINITY)
 				{
-					System.out.println("Right sense: "+rSamples[0]+" Left sense: " + lSamples[0]);
-					rightMotor.rotate(-20);
-					leftMotor.rotate(-20);
+					angleSense.fetchSample(gyroAngles, 0);
+					if(correctAngle(gyroAngles[0])-gyroAngles[0]>0)
+					{
+						steeringMotor.rotateTo(-5);
+						leftMotor.rotate(15);
+						rightMotor.rotate(15);
+						steeringMotor.rotateTo(5);
+						leftMotor.rotate(-15);
+						rightMotor.rotate(-15);
+						steeringMotor.rotateTo(0);
+					}
+					else if(correctAngle(gyroAngles[0])-gyroAngles[0]<0)
+					{
+						steeringMotor.rotateTo(5);
+						leftMotor.rotate(15);
+						rightMotor.rotate(15);
+						steeringMotor.rotateTo(-5);
+						leftMotor.rotate(-15);
+						rightMotor.rotate(-15);
+						steeringMotor.rotateTo(0);	
+					}
+					rightSense.fetchSample(rSamples, 0);
+				}
+				if(rSamples[0]>=spaceDist)
+				{
+					System.out.println("Right sense: "+rSamples[0]);
 					setStatus(Status.Turning_Right);
 //					System.out.println("End Angle: " + endAngle);
 					angleSense.fetchSample(gyroAngles, 0);
@@ -262,17 +284,39 @@ public class MarsNavigation {
 				}
 				break;
 			case Forward:
-				rightSense.fetchSample(rSamples, 0);
 				leftSense.fetchSample(lSamples, 0);
 				correctVeer();
 				frontSense.fetchSample(frontSamples, 0);
 //				System.out.println("Distance:\t" + frontSamples[0]);
 //				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
-				if(lSamples[0]>spaceDist)
+				if(lSamples[0] == Float.POSITIVE_INFINITY)
 				{
-					System.out.println("Right sense: "+rSamples[0]+" Left sense: " + lSamples[0]);
-					rightMotor.rotate(20);
-					leftMotor.rotate(20);
+					angleSense.fetchSample(gyroAngles, 0);
+					if(correctAngle(gyroAngles[0])-gyroAngles[0]>0)
+					{
+						steeringMotor.rotateTo(5);
+						leftMotor.rotate(-15);
+						rightMotor.rotate(-15);
+						steeringMotor.rotateTo(-5);
+						leftMotor.rotate(15);
+						rightMotor.rotate(15);
+						steeringMotor.rotateTo(0);
+					}
+					else if(correctAngle(gyroAngles[0])-gyroAngles[0]<0)
+					{
+						steeringMotor.rotateTo(-5);
+						leftMotor.rotate(-15);
+						rightMotor.rotate(-15);
+						steeringMotor.rotateTo(5);
+						leftMotor.rotate(15);
+						rightMotor.rotate(15);
+						steeringMotor.rotateTo(0);	
+					}
+					leftSense.fetchSample(lSamples, 0);
+				}
+				if(lSamples[0]>=spaceDist)
+				{
+					System.out.println("Left sense: " + lSamples[0]);
 					setStatus(Status.Turning_Left);
 					System.out.println("End Angle: " + endAngle);
 					angleSense.fetchSample(gyroAngles, 0);
