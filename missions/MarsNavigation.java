@@ -159,7 +159,7 @@ public class MarsNavigation {
 		{
 			double y = realY + 0.2;
 			int yCoord = (int)(y / spaceDist);
-			double x = realX - (spaceDist / 2.0);
+			double x = realX;
 			int xCoord = (int)(x / spaceDist);
 			
 			Cell cache = new Cell(xCoord, yCoord);
@@ -249,6 +249,8 @@ public class MarsNavigation {
 				if(rSamples[0]>spaceDist)
 				{
 					System.out.println("Right sense: "+rSamples[0]+" Left sense: " + lSamples[0]);
+					rightMotor.rotate(-20);
+					leftMotor.rotate(-20);
 					setStatus(Status.Turning_Right);
 //					System.out.println("End Angle: " + endAngle);
 					angleSense.fetchSample(gyroAngles, 0);
@@ -269,6 +271,8 @@ public class MarsNavigation {
 				if(lSamples[0]>spaceDist)
 				{
 					System.out.println("Right sense: "+rSamples[0]+" Left sense: " + lSamples[0]);
+					rightMotor.rotate(20);
+					leftMotor.rotate(20);
 					setStatus(Status.Turning_Left);
 					System.out.println("End Angle: " + endAngle);
 					angleSense.fetchSample(gyroAngles, 0);
@@ -408,7 +412,7 @@ public class MarsNavigation {
 				while( true )
 				{
 					updateLocation();
-//					System.out.println(getStatus().toString()+", x: "+realX + ", y: " +realY + " left: " + lSamples[0] + " right: " + rSamples[0] );
+					System.out.println(getStatus().toString()+", x: "+realX + ", y: " +realY + " left: " + lSamples[0] + " right: " + rSamples[0] );
 				}
 			}
 		});
