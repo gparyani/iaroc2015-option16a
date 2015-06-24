@@ -167,6 +167,8 @@ public class MarsNavigation {
 			int yCoord = (int)(y / spaceDist);
 			double x = realX;
 			int xCoord = (int)(x / spaceDist);
+			if(realX < 0)
+				xCoord -= 1;	//Adjust for integer division
 			
 			Cell cache = new Cell(xCoord, yCoord);
 			
@@ -431,11 +433,11 @@ public class MarsNavigation {
 		int newSteerPos;
 		if( lSamples[0] < 0.15f )
 		{
-			newSteerPos = (int)(-100 * (0.15f - lSamples[0]));
+			newSteerPos = (int)(-100 * (0.15f - lSamples[0])) - 7;
 		}
 		else if( rSamples[0] < 0.15f )
 		{
-			newSteerPos = (int)(100 * (0.15f - rSamples[0]));
+			newSteerPos = (int)(100 * (0.15f - rSamples[0])) + 7;
 		}
 		else
 		{
@@ -489,7 +491,7 @@ public class MarsNavigation {
 		float leftDist = lSamples[0];
 		rightSense.fetchSample(rSamples, 0);
 		float rightDist = rSamples[0];
-		spaceDist = leftDist + rightDist + 0.19f+0.0762f; //19=robot + 0.0762 = wall width
+		spaceDist = leftDist + rightDist + 0.215f+0.0762f; //19=robot + 0.0762 = wall width
 		realX = spaceDist / 2.0;
 		realY = 0.14;
 		System.out.println("Left Space: " + leftDist);
