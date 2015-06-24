@@ -54,6 +54,7 @@ public class MarsNavigation {
 	static SensorMode frontSense;
 	static int steerPos = 0;
 	static Cell turningFrom;
+	static float WALL_SENSITIVITY = 0.15f;
 	
 	public static Status getStatus()
 	{
@@ -431,13 +432,13 @@ public class MarsNavigation {
 
 	private static void correctVeer() {
 		int newSteerPos;
-		if( lSamples[0] < 0.15f )
+		if( lSamples[0] < WALL_SENSITIVITY )
 		{
-			newSteerPos = (int)(-100 * (0.15f - lSamples[0])) - 7;
+			newSteerPos = (int)(100 * (WALL_SENSITIVITY - lSamples[0])) + 7;
 		}
-		else if( rSamples[0] < 0.15f )
+		else if( rSamples[0] < WALL_SENSITIVITY )
 		{
-			newSteerPos = (int)(100 * (0.15f - rSamples[0])) + 7;
+			newSteerPos = (int)(-100 * (WALL_SENSITIVITY - rSamples[0])) - 7;
 		}
 		else
 		{
