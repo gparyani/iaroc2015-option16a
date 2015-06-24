@@ -229,88 +229,62 @@ public class MarsNavigation {
 //Loop Function
 		Sound.beep();
 		System.out.println("Calibration complete");
-		
-		do
-		{
-			rightMotor.stop();
-			leftMotor.stop();
-		}
-		while(Button.LEFT.isUp() && Button.RIGHT.isUp());
 	
 		
 		if(Button.LEFT.isDown())
 		{
-			
-			int reading = rightMotor.getTachoCount();
-					
-			float rMax = rightMotor.getMaxSpeed();
-			float lMax = leftMotor.getMaxSpeed();
-			
-			
-			rightMotor.forward();
-			leftMotor.forward();
-			
-			do
+			leftMotor.setSpeed(leftMotor.getMaxSpeed());
+			rightMotor.setSpeed(rightMotor.getMaxSpeed());
+			rSamples[0] = 10;
+			lSamples[0] = 10;
+			setStatus(Status.Forward);
+			while(true)
 			{
-				 
-				frontSense.fetchSample(frontSamples, 0);
-				
-				System.out.println(frontSamples[0]);
-											
-			}
-			while(frontSamples[0] > 50);	
-			
-			
-			rightMotor.setSpeed(rMax/2);
-			leftMotor.setSpeed(lMax/2);
-			rightMotor.forward();
-			leftMotor.forward();
-			
-			do
-			{
-				System.out.println("Slower");
-			}
-			while(rightMotor.isStalled() != true);
-			//Errors somewhere after this line
-			System.out.println("is stalled");	
-			
-			rightMotor.stop();
-			leftMotor.stop();
-			Delay.msDelay(1000); //DELETE DELAY LATER
-			
-			System.out.println("finished delay"); 
-			
-			rightMotor.setSpeed(rMax);
-			leftMotor.setSpeed(lMax);
-			System.out.println("Speed set");
-			
-			rightMotor.backward();
-			leftMotor.backward(); //CORRECT VEER ON WAY BACK
-			System.out.println("Moving backwards"); 
-			
-			while(reading > 0)
-			{
-				reading = rightMotor.getTachoCount();
-				System.out.println(reading);
-				
-				if(reading < 412) //1 meter
-				{
-					rightMotor.setSpeed(rMax/2); //sets speed too often?
-					leftMotor.setSpeed(lMax/2);
-					System.out.println("slowing");
+				int reading = rightMotor.getTachoCount();
+				switch(getStatus()){
+				case Backward:
+					correctVeer();
+					if(reading <= 412)
+					{
+						rightMotor.setSpeed(rightMotor.getMaxSpeed()/2);
+						leftMotor.setSpeed(leftMotor.getMaxSpeed()/2);
+					}
+					if(rightMotor.isStalled() || leftMotor.isStalled())
+					{
+						rightMotor.stop();
+						leftMotor.stop();
+					}
+					break;
+				case Forward:
+					frontSense.fetchSample(frontSamples, 0);
+					correctVeer();
+					if(frontSamples[0]>=30)
+					{
+						rightMotor.setSpeed(rightMotor.getMaxSpeed()/2);
+						leftMotor.setSpeed(leftMotor.getMaxSpeed()/2);
+					}
+					if(rightMotor.isStalled() || leftMotor.isStalled())
+					{
+						rightMotor.setSpeed(rightMotor.getMaxSpeed());
+						leftMotor.setSpeed(leftMotor.getMaxSpeed());
+						rightMotor.stop();
+						leftMotor.stop();
+						setStatus(Status.Backward);
+					}
+					break;
+				case Turning_Left:
+					break;
+				case Turning_Right:
+					break;
+				default:
+					break;
 				}
-				
 			}
-			
-			rightMotor.stop();
-			leftMotor.stop();
-		
-			
-			}
-		
-		
+		}		
 		else if(Button.RIGHT.isDown())
 		{
+			leftMotor.setSpeed(120);
+			rightMotor.setSpeed(120);
 			startLocationMode();
 
 			setStatus(Status.Forward);
@@ -331,31 +305,31 @@ public class MarsNavigation {
 				correctVeer();
 //				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
 //				tachoReading = leftMotor.getTachoCount();
-				if(rSamples[0] == Float.POSITIVE_INFINITY)
-				{
-					angleSense.fetchSample(gyroAngles, 0);
-					if(correctAngle(gyroAngles[0])-gyroAngles[0]>0)
-					{
-						steeringMotor.rotateTo(-5);
-						leftMotor.rotate(15);
-						rightMotor.rotate(15);
-						steeringMotor.rotateTo(5);
-						leftMotor.rotate(-15);
-						rightMotor.rotate(-15);
-						steeringMotor.rotateTo(0);
-					}
-					else if(correctAngle(gyroAngles[0])-gyroAngles[0]<0)
-					{
-						steeringMotor.rotateTo(5);
-						leftMotor.rotate(15);
-						rightMotor.rotate(15);
-						steeringMotor.rotateTo(-5);
-						leftMotor.rotate(-15);
-						rightMotor.rotate(-15);
-						steeringMotor.rotateTo(0);	
-					}
-					rightSense.fetchSample(rSamples, 0);
-				}
+//				if(rSamples[0] == Float.POSITIVE_INFINITY)
+//				{
+//					angleSense.fetchSample(gyroAngles, 0);
+//					if(correctAngle(gyroAngles[0])-gyroAngles[0]>0)
+//					{
+//						steeringMotor.rotateTo(-5);
+//						leftMotor.rotate(15);
+//						rightMotor.rotate(15);
+//						steeringMotor.rotateTo(5);
+//						leftMotor.rotate(-15);
+//						rightMotor.rotate(-15);
+//						steeringMotor.rotateTo(0);
+//					}
+//					else if(correctAngle(gyroAngles[0])-gyroAngles[0]<0)
+//					{
+//						steeringMotor.rotateTo(5);
+//						leftMotor.rotate(15);
+//						rightMotor.rotate(15);
+//						steeringMotor.rotateTo(-5);
+//						leftMotor.rotate(-15);
+//						rightMotor.rotate(-15);
+//						steeringMotor.rotateTo(0);	
+//					}
+//					rightSense.fetchSample(rSamples, 0);
+//				}
 				if(rSamples[0]>=spaceDist)
 				{
 					System.out.println("Right sense: "+rSamples[0]);
@@ -375,31 +349,31 @@ public class MarsNavigation {
 				frontSense.fetchSample(frontSamples, 0);
 //				System.out.println("Distance:\t" + frontSamples[0]);
 //				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
-				if(lSamples[0] == Float.POSITIVE_INFINITY)
-				{
-					angleSense.fetchSample(gyroAngles, 0);
-					if(correctAngle(gyroAngles[0])-gyroAngles[0]>0)
-					{
-						steeringMotor.rotateTo(5);
-						leftMotor.rotate(-15);
-						rightMotor.rotate(-15);
-						steeringMotor.rotateTo(-5);
-						leftMotor.rotate(15);
-						rightMotor.rotate(15);
-						steeringMotor.rotateTo(0);
-					}
-					else if(correctAngle(gyroAngles[0])-gyroAngles[0]<0)
-					{
-						steeringMotor.rotateTo(-5);
-						leftMotor.rotate(-15);
-						rightMotor.rotate(-15);
-						steeringMotor.rotateTo(5);
-						leftMotor.rotate(15);
-						rightMotor.rotate(15);
-						steeringMotor.rotateTo(0);	
-					}
-					leftSense.fetchSample(lSamples, 0);
-				}
+//				if(lSamples[0] == Float.POSITIVE_INFINITY)
+//				{
+//					angleSense.fetchSample(gyroAngles, 0);
+//					if(correctAngle(gyroAngles[0])-gyroAngles[0]>0)
+//					{
+//						steeringMotor.rotateTo(5);
+//						leftMotor.rotate(-15);
+//						rightMotor.rotate(-15);
+//						steeringMotor.rotateTo(-5);
+//						leftMotor.rotate(15);
+//						rightMotor.rotate(15);
+//						steeringMotor.rotateTo(0);
+//					}
+//					else if(correctAngle(gyroAngles[0])-gyroAngles[0]<0)
+//					{
+//						steeringMotor.rotateTo(-5);
+//						leftMotor.rotate(-15);
+//						rightMotor.rotate(-15);
+//						steeringMotor.rotateTo(5);
+//						leftMotor.rotate(15);
+//						rightMotor.rotate(15);
+//						steeringMotor.rotateTo(0);	
+//					}
+//					leftSense.fetchSample(lSamples, 0);
+//				}
 				if(lSamples[0]>=spaceDist)
 				{
 					System.out.println("Left sense: " + lSamples[0]);
@@ -519,8 +493,7 @@ public class MarsNavigation {
 		leftMotor = new EV3LargeRegulatedMotor(MotorPort.B);
 		rightMotor = new EV3LargeRegulatedMotor(MotorPort.C);
 		steeringMotor = new EV3MediumRegulatedMotor(MotorPort.A);
-		leftMotor.setSpeed(120);
-		rightMotor.setSpeed(120);
+
 		steeringMotor.setSpeed(steeringMotor.getMaxSpeed());
 	}
 	private static void updateLocation() {
