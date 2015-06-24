@@ -3,6 +3,7 @@ package missions;
 import helperClasses.ArduinoSideSensors;
 
 import java.util.HashSet;
+import java.util.Set;
 
 import lejos.hardware.Button;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
@@ -83,8 +84,9 @@ public class MarsNavigation {
 			case Turning_Left:
 				turningFrom = Cell.getCurrentCell();
 				steeringMotor.rotateTo(steeringRange / 3);
-				rightMotor.rotate(-60, true);
-				leftMotor.rotate(-60);
+				int backoffLeft = getLeftBackoff();
+				rightMotor.rotate(-backoffLeft, true);
+				leftMotor.rotate(-backoffLeft);
 				steeringMotor.rotateTo(-(steeringRange/3));
 				rightMotor.forward();
 				leftMotor.forward();
@@ -93,8 +95,9 @@ public class MarsNavigation {
 			case Turning_Right:
 				turningFrom = Cell.getCurrentCell();
 				steeringMotor.rotateTo(-steeringRange / 3);
-				rightMotor.rotate(-75, true);
-				leftMotor.rotate(-75);
+				int backoffRight = getRightBackoff();
+				rightMotor.rotate(-backoffRight, true);
+				leftMotor.rotate(-backoffRight);
 				steeringMotor.rotateTo(steeringRange/3);
 				rightMotor.forward();
 				leftMotor.forward();
@@ -106,20 +109,70 @@ public class MarsNavigation {
 		currentStatus = newStatus;
 	}
 	
+	private static int getRightBackoff() {
+		return 60;
+	}
+
+	private static int getLeftBackoff() {
+		// TODO Auto-generated method stub
+		return 75;
+	}
+
 	public static enum Direction
 	{
-		NORTH, SOUTH, EAST, WEST, IN_BETWEEN
+		NORTH, SOUTH, EAST, WEST, IN_BETWEEN;
+		
+		public static Direction getDirectionFromGyro()
+		{
+			int modifiedAngle = (int) gyroAngles[0];
+			
+			//ensure our values are between 0 and 359
+			while(modifiedAngle < 0)
+				modifiedAngle += 360;
+			modifiedAngle %= 360;
+			
+			if(modifiedAngle >= 90 - 2*ANGLE_ERROR_MARGIN && modifiedAngle <= 90 + 2*ANGLE_ERROR_MARGIN)
+				return WEST;
+			else if(modifiedAngle >= 180 - 2*ANGLE_ERROR_MARGIN && modifiedAngle <= 180 + 2*ANGLE_ERROR_MARGIN)
+				return SOUTH;
+			else if(modifiedAngle >= 270 - 2*ANGLE_ERROR_MARGIN && modifiedAngle <= 270 + 2*ANGLE_ERROR_MARGIN)
+				return EAST;
+			else if(modifiedAngle >= 360 - 2*ANGLE_ERROR_MARGIN || modifiedAngle <= 2*ANGLE_ERROR_MARGIN)
+				return NORTH;
+			
+			return IN_BETWEEN;
+		}
+		
+		public Direction getOppositeDirection()
+		{
+			switch(this) {
+			case NORTH:
+				return SOUTH;
+			case EAST:
+				return WEST;
+			case SOUTH:
+				return NORTH;
+			case WEST:
+				return EAST;
+			default:
+				break;
+			}
+			
+			return this;    //IN_BETWEEN's opposite direction is also IN_BETWEEN; compiler throws error if in switch statement itself
+
+		}
+
+
 	}
 	
 	public static class Cell
 	{
-		static HashSet<Cell> cells = new HashSet<Cell>();
+		static Set<Cell> cells = new HashSet<Cell>();
 		
 		public enum WallState
 		{
 			UNKNOWN, NO_WALL, REAL_WALL, VIRTUAL_WALL
 		}
-		
 		
 		private int x, y;
 		private WallState north = WallState.UNKNOWN,
@@ -135,6 +188,27 @@ public class MarsNavigation {
 			return y;
 		}
 		
+		public void setWallState(Direction dir, WallState state)
+		{
+			switch(dir)
+			{
+			case NORTH:
+				north = state;
+				break;
+			case SOUTH:
+				south = state;
+				break;
+			case WEST:
+				west = state;
+				break;
+			case EAST:
+				east = state;
+				break;
+			default:
+				break;
+			}
+		}
+		
 		public boolean equals(Object obj)
 		{
 			if(obj instanceof Cell)
@@ -146,6 +220,7 @@ public class MarsNavigation {
 				return false;
 		}
 		
+		@Override
 		public int hashCode()
 		{
 			return x * 3737 + y;
@@ -157,6 +232,7 @@ public class MarsNavigation {
 			this.y = y;
 		}
 		
+		@Override
 		public String toString()
 		{
 			return "Cell (" + x + ", " + y + ")";
@@ -343,6 +419,7 @@ public class MarsNavigation {
 				if(rSamples[0]>=spaceDist)
 				{
 					System.out.println("Right sense: "+rSamples[0]);
+					Cell.getCurrentCell().setWallState(Direction.getDirectionFromGyro(), Cell.WallState.VIRTUAL_WALL);
 					setStatus(Status.Turning_Right);
 //					System.out.println("End Angle: " + endAngle);
 					angleSense.fetchSample(gyroAngles, 0);
@@ -435,11 +512,11 @@ public class MarsNavigation {
 		int newSteerPos;
 		if( lSamples[0] < WALL_SENSITIVITY )
 		{
-			newSteerPos = (int)(100 * (WALL_SENSITIVITY - lSamples[0])) + 7;
+			newSteerPos = (int)(50 * (WALL_SENSITIVITY - lSamples[0])) + 4;
 		}
 		else if( rSamples[0] < WALL_SENSITIVITY )
 		{
-			newSteerPos = (int)(-100 * (WALL_SENSITIVITY - rSamples[0])) - 7;
+			newSteerPos = (int)(-50 * (WALL_SENSITIVITY - rSamples[0])) - 4;
 		}
 		else
 		{
