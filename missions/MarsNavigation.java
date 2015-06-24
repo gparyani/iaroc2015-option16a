@@ -265,12 +265,12 @@ public class MarsNavigation {
 						rightMotor.setSpeed(rightMotor.getMaxSpeed()/4);
 						leftMotor.setSpeed(leftMotor.getMaxSpeed()/4);
 					}
-					if(rightMotor.isStalled() || leftMotor.isStalled())
+					if(frontSamples[0]<=10)
 					{
-						rightMotor.setSpeed(rightMotor.getMaxSpeed());
-						leftMotor.setSpeed(leftMotor.getMaxSpeed());
 						rightMotor.stop();
 						leftMotor.stop();
+						rightMotor.setSpeed(rightMotor.getMaxSpeed());
+						leftMotor.setSpeed(leftMotor.getMaxSpeed());
 						setStatus(Status.Backward);
 					}
 					break;
