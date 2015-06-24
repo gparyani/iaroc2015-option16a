@@ -24,7 +24,7 @@ public class MarsNavigation {
 	static NXTUltrasonicSensor leftSensor;
 	static EV3IRSensor irSensor;
 	static int steeringRange;
-	static final int MULTIPLIER = 3;
+	static final int MULTIPLIER = 4;
 	static int trueMultiplier = MULTIPLIER;
 
 
@@ -258,6 +258,7 @@ public class MarsNavigation {
 					break;
 				case Forward:
 					frontSense.fetchSample(frontSamples, 0);
+					System.out.println("Front Reading: " + frontSamples[0]);
 					correctVeer();
 					if(frontSamples[0]<=40)
 					{
