@@ -24,7 +24,7 @@ public class MarsNavigation {
 	static NXTUltrasonicSensor leftSensor;
 	static EV3IRSensor irSensor;
 	static int steeringRange;
-	static final int MULTIPLIER = 4;
+	static final int MULTIPLIER = 3;
 	static int trueMultiplier = MULTIPLIER;
 
 
@@ -230,8 +230,9 @@ public class MarsNavigation {
 		Sound.beep();
 		System.out.println("Calibration complete");
 	
+		int press = Button.waitForAnyPress();
 		
-		if(Button.LEFT.isDown())
+		if(press == Button.LEFT.getId())
 		{
 			leftMotor.setSpeed(leftMotor.getMaxSpeed());
 			rightMotor.setSpeed(rightMotor.getMaxSpeed());
@@ -258,10 +259,10 @@ public class MarsNavigation {
 				case Forward:
 					frontSense.fetchSample(frontSamples, 0);
 					correctVeer();
-					if(frontSamples[0]>=30)
+					if(frontSamples[0]<=40)
 					{
-						rightMotor.setSpeed(rightMotor.getMaxSpeed()/2);
-						leftMotor.setSpeed(leftMotor.getMaxSpeed()/2);
+						rightMotor.setSpeed(rightMotor.getMaxSpeed()/4);
+						leftMotor.setSpeed(leftMotor.getMaxSpeed()/4);
 					}
 					if(rightMotor.isStalled() || leftMotor.isStalled())
 					{
@@ -281,7 +282,7 @@ public class MarsNavigation {
 				}
 			}
 		}		
-		else if(Button.RIGHT.isDown())
+		else if(press == Button.RIGHT.getId())
 		{
 			leftMotor.setSpeed(120);
 			rightMotor.setSpeed(120);
