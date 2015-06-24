@@ -431,20 +431,22 @@ public class MarsNavigation {
 		int newSteerPos;
 		if( lSamples[0] < 0.15f )
 		{
-			newSteerPos = -35;
+			newSteerPos = (int)(-100 * (0.15f - lSamples[0]));
 		}
 		else if( rSamples[0] < 0.15f )
 		{
-			newSteerPos = 35;
+			newSteerPos = (int)(100 * (0.15f - rSamples[0]));
 		}
 		else
 		{
 			angleSense.fetchSample(gyroAngles, 0);
 			if(gyroAngles[0] < (endAngle - ANGLE_ERROR_MARGIN) || gyroAngles[0] > (endAngle + ANGLE_ERROR_MARGIN))
-				newSteerPos = (int) (trueMultiplier * (gyroAngles[0] - endAngle));
+				newSteerPos = (int) (gyroAngles[0] - endAngle);
 			else
 				newSteerPos = 0;
 		}
+		
+		newSteerPos *= trueMultiplier;
 		
 		System.out.println("Steering to " + steerPos);
 		
