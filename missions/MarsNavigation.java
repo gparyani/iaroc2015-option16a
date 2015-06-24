@@ -53,7 +53,7 @@ public class MarsNavigation {
 	static SensorMode frontSense;
 	static int steerPos = 0;
 	static Cell turningFrom;
-	static float WALL_SENSITIVITY = 0.15f;
+	static final float WALL_SENSITIVITY = 0.15f;
 	
 	public static Status getStatus()
 	{
