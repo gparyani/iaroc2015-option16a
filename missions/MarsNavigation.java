@@ -1,5 +1,7 @@
 package missions;
 
+import helperClasses.ArduinoSideSensors;
+
 import java.util.HashSet;
 
 import lejos.hardware.Button;
@@ -10,7 +12,6 @@ import lejos.hardware.port.MotorPort;
 import lejos.hardware.port.SensorPort;
 import lejos.hardware.sensor.EV3GyroSensor;
 import lejos.hardware.sensor.EV3IRSensor;
-import lejos.hardware.sensor.NXTUltrasonicSensor;
 import lejos.hardware.sensor.SensorMode;
 import lejos.robotics.SampleProvider;
 import lejos.utility.Delay;
@@ -20,8 +21,9 @@ public class MarsNavigation {
 	static EV3LargeRegulatedMotor leftMotor;
 	static EV3LargeRegulatedMotor rightMotor;
 	static EV3MediumRegulatedMotor steeringMotor;
-	static NXTUltrasonicSensor rightSensor;
-	static NXTUltrasonicSensor leftSensor;
+//	static NXTUltrasonicSensor rightSensor;
+//	static NXTUltrasonicSensor leftSensor;
+	static ArduinoSideSensors sideSensors;
 	static EV3IRSensor irSensor;
 	static int steeringRange;
 	static final int MULTIPLIER = 4;
@@ -40,8 +42,8 @@ public class MarsNavigation {
 	static float[] gyroAngles = new float[1];
 	static int endAngle = 0;
 	static float spaceDist;
-	static volatile double realX = 0;
-	static volatile double realY = 0;
+	static volatile double realX;
+	static volatile double realY;
 	static int lPrevTacho = 0;
 	static int rPrevTacho = 0;
 	static EV3GyroSensor gyro;
@@ -51,6 +53,7 @@ public class MarsNavigation {
 	static SampleProvider angleSense;
 	static SensorMode frontSense;
 	static int steerPos = 0;
+	static Cell turningFrom;
 	
 	public static Status getStatus()
 	{
@@ -59,7 +62,7 @@ public class MarsNavigation {
 	
 	public static void setStatus(Status newStatus)
 	{
-		if( newStatus != currentStatus)
+		if(newStatus != currentStatus)
 		{
 			System.out.println("State transition: " + newStatus);
 			leftMotor.stop();
@@ -78,9 +81,10 @@ public class MarsNavigation {
 				trueMultiplier = MULTIPLIER;
 				break;
 			case Turning_Left:
+				turningFrom = Cell.getCurrentCell();
 				steeringMotor.rotateTo(steeringRange / 3);
-				rightMotor.rotate(-75, true);
-				leftMotor.rotate(-75);
+				rightMotor.rotate(-60, true);
+				leftMotor.rotate(-60);
 				steeringMotor.rotateTo(-(steeringRange/3));
 				rightMotor.forward();
 				leftMotor.forward();
@@ -159,7 +163,7 @@ public class MarsNavigation {
 		
 		public static Cell getCurrentCell()
 		{
-			double y = realY + 0.2;
+			double y = realY;
 			int yCoord = (int)(y / spaceDist);
 			double x = realX;
 			int xCoord = (int)(x / spaceDist);
@@ -265,12 +269,12 @@ public class MarsNavigation {
 						rightMotor.setSpeed(rightMotor.getMaxSpeed()/4);
 						leftMotor.setSpeed(leftMotor.getMaxSpeed()/4);
 					}
-					if(frontSamples[0]<=10)
+					if(rightMotor.isStalled() || leftMotor.isStalled())
 					{
-						rightMotor.stop();
-						leftMotor.stop();
 						rightMotor.setSpeed(rightMotor.getMaxSpeed());
 						leftMotor.setSpeed(leftMotor.getMaxSpeed());
+						rightMotor.stop();
+						leftMotor.stop();
 						setStatus(Status.Backward);
 					}
 					break;
@@ -287,9 +291,9 @@ public class MarsNavigation {
 		{
 			leftMotor.setSpeed(120);
 			rightMotor.setSpeed(120);
-			startLocationMode();
 
 			setStatus(Status.Forward);
+			startLocationMode();
 				
 			for(int i = 1; true; ++i)
 			{
@@ -376,7 +380,7 @@ public class MarsNavigation {
 //					}
 //					leftSense.fetchSample(lSamples, 0);
 //				}
-				if(lSamples[0]>=spaceDist)
+				if(lSamples[0]>=spaceDist && !(Cell.getCurrentCell().equals(turningFrom)))
 				{
 					System.out.println("Left sense: " + lSamples[0]);
 					setStatus(Status.Turning_Left);
@@ -425,13 +429,13 @@ public class MarsNavigation {
 
 	private static void correctVeer() {
 		int newSteerPos;
-		if( lSamples[0] < 0.1f )
+		if( lSamples[0] < 0.15f )
 		{
-			newSteerPos = -10;
+			newSteerPos = -35;
 		}
-		else if( rSamples[0] < 0.1f )
+		else if( rSamples[0] < 0.15f )
 		{
-			newSteerPos = 10;
+			newSteerPos = 35;
 		}
 		else
 		{
@@ -472,23 +476,28 @@ public class MarsNavigation {
 	}
 
 	private static void initializeSensors() {
-		rightSensor = new NXTUltrasonicSensor(SensorPort.S3);
-		leftSensor = new NXTUltrasonicSensor(SensorPort.S2);
+//		rightSensor = new NXTUltrasonicSensor(SensorPort.S3);
+//		leftSensor = new NXTUltrasonicSensor(SensorPort.S2);
+		sideSensors = new ArduinoSideSensors(SensorPort.S2, 4);
 		irSensor = new EV3IRSensor(SensorPort.S4);
+		rightSense = sideSensors.getRightSensorMode();
+		leftSense = sideSensors.getLeftSensorMode();
 		//Adapts to all size boxes
-		leftSensor.fetchSample(lSamples, 0);
+		leftSense.fetchSample(lSamples, 0);
 		float leftDist = lSamples[0];
-		rightSensor.fetchSample(rSamples, 0);
+		rightSense.fetchSample(rSamples, 0);
 		float rightDist = rSamples[0];
 		spaceDist = leftDist + rightDist + 0.19f+0.0762f; //19=robot + 0.0762 = wall width
+		realX = spaceDist / 2.0;
+		realY = 0.14;
 		System.out.println("Left Space: " + leftDist);
 		System.out.println("Right Space: " + rightDist);
 		System.out.println("Total Space:" + spaceDist);
 		frontSense = irSensor.getDistanceMode();
-		rightSensor.enable();
-		leftSensor.enable();
-		rightSense = rightSensor.getDistanceMode();
-		leftSense = leftSensor.getDistanceMode();
+//		rightSensor.enable();
+//		leftSensor.enable();
+//		rightSense = rightSensor.getDistanceMode();
+//		leftSense = leftSensor.getDistanceMode();
 	}
 
 	private static void initializeMotors() {
