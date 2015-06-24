@@ -5,7 +5,6 @@ import helperClasses.ArduinoSideSensors;
 import java.util.HashSet;
 
 import lejos.hardware.Button;
-import lejos.hardware.Sound;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 import lejos.hardware.motor.EV3MediumRegulatedMotor;
 import lejos.hardware.port.MotorPort;
@@ -92,6 +91,7 @@ public class MarsNavigation {
 				endAngle = correctAngle(gyroAngles[0])+90;
 				break;
 			case Turning_Right:
+				turningFrom = Cell.getCurrentCell();
 				steeringMotor.rotateTo(-steeringRange / 3);
 				rightMotor.rotate(-75, true);
 				leftMotor.rotate(-75);
@@ -229,12 +229,13 @@ public class MarsNavigation {
 		
 		alignSteering();
 		
+		Button.LEDPattern(2);
 		calibrateGyro();
 			
 		beginningTime = System.nanoTime();
 		
 //Loop Function
-		Sound.beep();
+		Button.LEDPattern(1);
 		System.out.println("Calibration complete");
 	
 		int press = Button.waitForAnyPress();
