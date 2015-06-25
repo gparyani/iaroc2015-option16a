@@ -31,7 +31,7 @@ public class MarsNavigation {
 
 
 	public enum Status{
-		Forward, Backward, Turning_Left, Turning_Right;
+		Forward, Backward, Turning_Left, Turning_Right,
 	}
 	
 	private static Status currentStatus;
@@ -84,9 +84,9 @@ public class MarsNavigation {
 			case Turning_Left:
 				turningFrom = Cell.getCurrentCell();
 				steeringMotor.rotateTo(steeringRange / 3);
-				int backoffLeft = getLeftBackoff();
-				rightMotor.rotate(-backoffLeft, true);
-				leftMotor.rotate(-backoffLeft);
+				int backoffLeft = getBackoff();
+				rightMotor.rotate(backoffLeft, true);
+				leftMotor.rotate(backoffLeft);
 				steeringMotor.rotateTo(-(steeringRange/3));
 				rightMotor.forward();
 				leftMotor.forward();
@@ -95,9 +95,9 @@ public class MarsNavigation {
 			case Turning_Right:
 				turningFrom = Cell.getCurrentCell();
 				steeringMotor.rotateTo(-steeringRange / 3);
-				int backoffRight = getRightBackoff();
-				rightMotor.rotate(-backoffRight, true);
-				leftMotor.rotate(-backoffRight);
+				int backoffRight = getBackoff();
+				rightMotor.rotate(backoffRight, true);
+				leftMotor.rotate(backoffRight);
 				steeringMotor.rotateTo(steeringRange/3);
 				rightMotor.forward();
 				leftMotor.forward();
@@ -109,13 +109,42 @@ public class MarsNavigation {
 		currentStatus = newStatus;
 	}
 	
-	private static int getRightBackoff() {
-		return 60;
+	private static void recover() {
+		steeringMotor.rotateTo(-steeringMotor.getTachoCount(), true);
+		leftMotor.rotate(-30, true);
+		rightMotor.rotate(-30);
+		leftMotor.stop();
+		rightMotor.stop();
+		leftMotor.forward();
+		rightMotor.forward();
 	}
 
-	private static int getLeftBackoff() {
-		// TODO Auto-generated method stub
-		return 75;
+	private static int getBackoff() {
+		double offset = 0;
+		Cell current = Cell.getCurrentCell();
+		Direction currentDir = Direction.getDirectionFromGyro();
+		System.out.println(currentDir);
+		System.out.println("[" + realX + ", " + realY + "]");
+		switch(currentDir)
+		{
+		case EAST:
+			offset = realX - (current.getX() * spaceDist);
+			break;
+		case NORTH:
+			offset = realY - (current.getY() * spaceDist);
+			break;
+		case SOUTH:
+			offset = ((current.getY() + 1) * spaceDist) - realY;
+			break;
+		case WEST:
+			offset = ((current.getX() + 1) * spaceDist) - realX;
+			break;
+		default:
+			return -60;
+		}
+		int toReturn = (int) ((0.02 - offset) * 412);
+		System.out.println("Backoff: " + toReturn);
+		return toReturn;
 	}
 
 	public static enum Direction
@@ -131,13 +160,13 @@ public class MarsNavigation {
 				modifiedAngle += 360;
 			modifiedAngle %= 360;
 			
-			if(modifiedAngle >= 90 - 2*ANGLE_ERROR_MARGIN && modifiedAngle <= 90 + 2*ANGLE_ERROR_MARGIN)
+			if(modifiedAngle >= 90 - 4*ANGLE_ERROR_MARGIN && modifiedAngle <= 90 + 4*ANGLE_ERROR_MARGIN)
 				return WEST;
-			else if(modifiedAngle >= 180 - 2*ANGLE_ERROR_MARGIN && modifiedAngle <= 180 + 2*ANGLE_ERROR_MARGIN)
+			else if(modifiedAngle >= 180 - 4*ANGLE_ERROR_MARGIN && modifiedAngle <= 180 + 4*ANGLE_ERROR_MARGIN)
 				return SOUTH;
-			else if(modifiedAngle >= 270 - 2*ANGLE_ERROR_MARGIN && modifiedAngle <= 270 + 2*ANGLE_ERROR_MARGIN)
+			else if(modifiedAngle >= 270 - 4*ANGLE_ERROR_MARGIN && modifiedAngle <= 270 + 4*ANGLE_ERROR_MARGIN)
 				return EAST;
-			else if(modifiedAngle >= 360 - 2*ANGLE_ERROR_MARGIN || modifiedAngle <= 2*ANGLE_ERROR_MARGIN)
+			else if(modifiedAngle >= 360 - 4*ANGLE_ERROR_MARGIN || modifiedAngle <= 4*ANGLE_ERROR_MARGIN)
 				return NORTH;
 			
 			return IN_BETWEEN;
@@ -369,8 +398,8 @@ public class MarsNavigation {
 		}		
 		else if(press == Button.RIGHT.getId())
 		{
-			leftMotor.setSpeed(120);
-			rightMotor.setSpeed(120);
+			leftMotor.setSpeed(125);
+			rightMotor.setSpeed(125);
 
 			setStatus(Status.Forward);
 			startLocationMode();
@@ -379,7 +408,11 @@ public class MarsNavigation {
 			{
 			
 //Update Sensors
-			
+			if((leftMotor.isStalled() || rightMotor.isStalled()) && currentStatus != Status.Backward)
+			{
+				recover();
+				correctVeer();
+			}
 //			tachoReading = leftMotor.getTachoCount(); //TachoCount will get lower when moving backwards
 //			System.out.println("After getting values at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
 //			Left Following Strategy
@@ -512,11 +545,11 @@ public class MarsNavigation {
 		int newSteerPos;
 		if( lSamples[0] < WALL_SENSITIVITY )
 		{
-			newSteerPos = (int)(50 * (WALL_SENSITIVITY - lSamples[0])) + 4;
+			newSteerPos = (int)((50 * (WALL_SENSITIVITY - lSamples[0])) + 4) * MULTIPLIER;
 		}
 		else if( rSamples[0] < WALL_SENSITIVITY )
 		{
-			newSteerPos = (int)(-50 * (WALL_SENSITIVITY - rSamples[0])) - 4;
+			newSteerPos = (int)((-50 * (WALL_SENSITIVITY - rSamples[0])) - 4) * MULTIPLIER;
 		}
 		else
 		{
@@ -525,9 +558,10 @@ public class MarsNavigation {
 				newSteerPos = (int) (gyroAngles[0] - endAngle);
 			else
 				newSteerPos = 0;
+			newSteerPos *= trueMultiplier;
 		}
 		
-		newSteerPos *= trueMultiplier;
+
 		
 		System.out.println("Steering to " + steerPos);
 		
@@ -570,7 +604,7 @@ public class MarsNavigation {
 		float leftDist = lSamples[0];
 		rightSense.fetchSample(rSamples, 0);
 		float rightDist = rSamples[0];
-		spaceDist = leftDist + rightDist + 0.215f+0.0762f; //19=robot + 0.0762 = wall width
+		spaceDist = leftDist + rightDist + 0.185f+0.0762f; //19=robot + 0.0762 = wall width
 		realX = spaceDist / 2.0;
 		realY = 0.14;
 		System.out.println("Left Space: " + leftDist);
@@ -614,7 +648,7 @@ public class MarsNavigation {
 				while( true )
 				{
 					updateLocation();
-					System.out.println(getStatus().toString()+", x: "+realX + ", y: " +realY + " left: " + lSamples[0] + " right: " + rSamples[0] );
+//					System.out.println(getStatus().toString()+", x: "+realX + ", y: " +realY + " left: " + lSamples[0] + " right: " + rSamples[0] );
 				}
 			}
 		});
