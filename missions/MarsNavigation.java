@@ -83,10 +83,16 @@ public class MarsNavigation {
 				break;
 			case Turning_Left:
 				turningFrom = Cell.getCurrentCell();
+				leftMotor.setSpeed(100);
+				rightMotor.setSpeed(100);
+
 				steeringMotor.rotateTo(steeringRange / 3);
 				int backoffLeft = getBackoff();
 				rightMotor.rotate(backoffLeft, true);
 				leftMotor.rotate(backoffLeft);
+				leftMotor.setSpeed(125);
+				rightMotor.setSpeed(125);
+
 				steeringMotor.rotateTo(-(steeringRange/3));
 				rightMotor.forward();
 				leftMotor.forward();
@@ -94,10 +100,16 @@ public class MarsNavigation {
 				break;
 			case Turning_Right:
 				turningFrom = Cell.getCurrentCell();
+				leftMotor.setSpeed(100);
+				rightMotor.setSpeed(100);
+
 				steeringMotor.rotateTo(-steeringRange / 3);
 				int backoffRight = getBackoff();
 				rightMotor.rotate(backoffRight, true);
 				leftMotor.rotate(backoffRight);
+				leftMotor.setSpeed(125);
+				rightMotor.setSpeed(125);
+
 				steeringMotor.rotateTo(steeringRange/3);
 				rightMotor.forward();
 				leftMotor.forward();
@@ -109,14 +121,46 @@ public class MarsNavigation {
 		currentStatus = newStatus;
 	}
 	
-	private static void recover() {
-		steeringMotor.rotateTo(-steeringMotor.getTachoCount(), true);
-		leftMotor.rotate(-30, true);
-		rightMotor.rotate(-30);
-		leftMotor.stop();
-		rightMotor.stop();
-		leftMotor.forward();
-		rightMotor.forward();
+	private static void recover(Status st) {
+		
+		switch( st )
+		{
+		case Forward:
+			frontSamples[0] = 0 ;
+			break;
+		case Turning_Left:
+		case Turning_Right:
+			int orig_steer = steeringMotor.getTachoCount();
+			leftMotor.stop();
+			rightMotor.stop();
+			if( Cell.getCurrentCell() == turningFrom )
+			{
+				System.out.println("Recovering from stall; still in same cell");
+				leftMotor.rotate(-75, true); //Back off 7cm
+				rightMotor.rotate(-75);
+				steeringMotor.rotateTo(-orig_steer, true);
+				leftMotor.rotate(75, true); //Go forward 7 cm in other direction
+				rightMotor.rotate(75);
+			}
+			else
+			{
+				System.out.println("Recovering from stall; not in same cell");
+				steeringMotor.rotateTo(-orig_steer, true);
+				leftMotor.rotate(-75, true); //Back off 10cm
+				rightMotor.rotate(-75);	
+			}
+			steeringMotor.rotateTo(orig_steer);
+			rightMotor.forward();
+			leftMotor.forward();
+			break;
+
+		case Backward:
+			break;
+			
+		default: 
+			break;
+			
+		}
 	}
 
 	private static int getBackoff() {
@@ -347,10 +391,9 @@ public class MarsNavigation {
 		
 		if(press == Button.LEFT.getId())
 		{
-			leftMotor.setSpeed(leftMotor.getMaxSpeed());
-			rightMotor.setSpeed(rightMotor.getMaxSpeed());
-			rSamples[0] = 10;
-			lSamples[0] = 10;
+			float speed = (int) rightMotor.getMaxSpeed();
+			leftMotor.setSpeed(speed);
+			rightMotor.setSpeed(speed);
 			setStatus(Status.Forward);
 			while(true)
 			{
@@ -360,8 +403,11 @@ public class MarsNavigation {
 					correctVeer();
 					if(reading <= 412)
 					{
-						rightMotor.setSpeed(rightMotor.getMaxSpeed()/2);
-						leftMotor.setSpeed(leftMotor.getMaxSpeed()/2);
+						speed = rightMotor.getMaxSpeed() / 4;
+						rightMotor.setSpeed(speed);
+						leftMotor.setSpeed(speed);
+						rightMotor.backward();
+						leftMotor.backward();
 					}
 					if(rightMotor.isStalled() || leftMotor.isStalled())
 					{
@@ -371,12 +417,40 @@ public class MarsNavigation {
 					break;
 				case Forward:
 					frontSense.fetchSample(frontSamples, 0);
+					leftSense.fetchSample(lSamples, 0);
+					rightSense.fetchSample(rSamples, 0);
 					System.out.println("Front Reading: " + frontSamples[0]);
 					correctVeer();
-					if(frontSamples[0]<=40)
+					if( leftMotor.getTachoCount() > (412 * 2))
 					{
-						rightMotor.setSpeed(rightMotor.getMaxSpeed()/4);
-						leftMotor.setSpeed(leftMotor.getMaxSpeed()/4);
+						if(frontSamples[0]<=40)
+						{
+							if(speed != rightMotor.getMaxSpeed() / 6)
+							{
+								System.out.println("Reducing speed to 1/4");
+//								rightMotor.flt();
+//								leftMotor.flt();
+								speed = rightMotor.getMaxSpeed() / 6;
+								rightMotor.setSpeed(speed);
+								leftMotor.setSpeed(speed);
+								rightMotor.forward();
+								leftMotor.forward();
+							}
+						}
+						else
+						{
+							if(rightMotor.getSpeed() != rightMotor.getMaxSpeed() / 2)
+							{
+								System.out.println("Reducing speed to 1/2");
+//								rightMotor.flt();
+//								leftMotor.flt();
+								speed = rightMotor.getMaxSpeed() / 2;
+								rightMotor.setSpeed(speed);
+								leftMotor.setSpeed(speed);
+								rightMotor.forward();
+								leftMotor.forward();
+							}
+						}
 					}
 					if(rightMotor.isStalled() || leftMotor.isStalled())
 					{
@@ -408,10 +482,9 @@ public class MarsNavigation {
 			{
 			
 //Update Sensors
-			if((leftMotor.isStalled() || rightMotor.isStalled()) && currentStatus != Status.Backward)
+			if(leftMotor.isStalled() || rightMotor.isStalled() )
 			{
-				recover();
-				correctVeer();
+				recover(currentStatus);
 			}
 //			tachoReading = leftMotor.getTachoCount(); //TachoCount will get lower when moving backwards
 //			System.out.println("After getting values at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
