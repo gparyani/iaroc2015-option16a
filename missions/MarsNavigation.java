@@ -26,7 +26,7 @@ public class MarsNavigation {
 	static ArduinoSideSensors sideSensors;
 	static EV3IRSensor irSensor;
 	static int steeringRange;
-	static final int MULTIPLIER = 4;
+	static final int MULTIPLIER = 3;
 	static int trueMultiplier = MULTIPLIER;
 
 
@@ -55,7 +55,6 @@ public class MarsNavigation {
 	static int steerPos = 0;
 	static Cell turningFrom;
 	static final float WALL_SENSITIVITY = 0.15f;
-	static boolean navigationChallenge;
 	
 	public static Status getStatus()
 	{
@@ -474,7 +473,6 @@ public class MarsNavigation {
 		}		
 		else if(press == Button.RIGHT.getId())
 		{
-			navigationChallenge = true;
 			leftMotor.setSpeed(125);
 			rightMotor.setSpeed(125);
 
@@ -630,11 +628,11 @@ public class MarsNavigation {
 
 	private static void correctVeer() {
 		int newSteerPos;
-		if( lSamples[0] < WALL_SENSITIVITY && navigationChallenge) //does this for challenge 1
+		if( lSamples[0] < WALL_SENSITIVITY) //does this for challenge 1
 		{
 			newSteerPos = (int)((50 * (WALL_SENSITIVITY - lSamples[0])) + 4) * MULTIPLIER; //if close to a wall, veer away from it
 		}
-		else if( rSamples[0] < WALL_SENSITIVITY && navigationChallenge)
+		else if( rSamples[0] < WALL_SENSITIVITY)
 		{
 			newSteerPos = (int)((-50 * (WALL_SENSITIVITY - rSamples[0])) - 4) * MULTIPLIER;
 		}
@@ -645,9 +643,7 @@ public class MarsNavigation {
 				newSteerPos = (int) (gyroAngles[0] - endAngle);
 			else
 				newSteerPos = 0;
-			
-			if( newSteerPos < 0 ) newSteerPos -= 3;
-			else if( newSteerPos > 0 ) newSteerPos += 3;
+//			newSteerPos += (int)Math.signum(newSteerPos) * 4;
 			newSteerPos *= trueMultiplier;
 		}
 		
