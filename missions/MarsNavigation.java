@@ -608,11 +608,11 @@ public class MarsNavigation {
 				break;
 			}
 			
-			if(Button.ENTER.isDown())
+			if(Button.ENTER.isDown()) 
 			{
-				leftMotor.stop();
+				leftMotor.stop(); 
 				rightMotor.stop();
-				realX = spaceDist / 2.0;
+				realX = spaceDist / 2.0; //refreshes coordinates
 				realY = 0.14; //distance from back of the robot to center
 				//above commands will cause Cell.getCurrentCell() to return (0, 0)
 				Button.LEDPattern(4);
@@ -645,6 +645,9 @@ public class MarsNavigation {
 				newSteerPos = (int) (gyroAngles[0] - endAngle);
 			else
 				newSteerPos = 0;
+			
+			if( newSteerPos < 0 ) newSteerPos -= 3;
+			else if( newSteerPos > 0 ) newSteerPos += 3;
 			newSteerPos *= trueMultiplier;
 		}
 		
