@@ -439,7 +439,7 @@ public class MarsNavigation {
 						}
 						else
 						{
-							if(rightMotor.getSpeed() != rightMotor.getMaxSpeed() / 2)
+							if(speed != rightMotor.getMaxSpeed() / 2)
 							{
 								System.out.println("Reducing speed to 1/2");
 //								rightMotor.flt();
