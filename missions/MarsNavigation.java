@@ -55,6 +55,7 @@ public class MarsNavigation {
 	static int steerPos = 0;
 	static Cell turningFrom;
 	static final float WALL_SENSITIVITY = 0.15f;
+	static boolean navigationChallenge;
 	
 	public static Status getStatus()
 	{
@@ -389,7 +390,7 @@ public class MarsNavigation {
 	
 		int press = Button.waitForAnyPress();
 		
-		if(press == Button.LEFT.getId())
+		if(press == Button.LEFT.getId()) //run challenge 1
 		{
 			float speed = (int) rightMotor.getMaxSpeed();
 			leftMotor.setSpeed(speed);
@@ -398,6 +399,7 @@ public class MarsNavigation {
 			while(true)
 			{
 				int reading = rightMotor.getTachoCount();
+				
 				switch(getStatus()){
 				case Backward:
 					correctVeer();
@@ -421,30 +423,30 @@ public class MarsNavigation {
 					rightSense.fetchSample(rSamples, 0);
 					System.out.println("Front Reading: " + frontSamples[0]);
 					correctVeer();
-					if( leftMotor.getTachoCount() > (412 * 2))
+					if( leftMotor.getTachoCount() > (412 * 5)) // go max speed for 4 meters
 					{
-						if(frontSamples[0]<=40)
+						if(frontSamples[0] <= 40) // if it is within 40 cm
 						{
-							if(speed != rightMotor.getMaxSpeed() / 6)
+							if(speed != rightMotor.getMaxSpeed() / 6) //and speed has not been reduced
 							{
-								System.out.println("Reducing speed to 1/4");
+								System.out.println("Reducing speed to 1/6"); 
 //								rightMotor.flt();
 //								leftMotor.flt();
-								speed = rightMotor.getMaxSpeed() / 6;
+								speed = rightMotor.getMaxSpeed() / 6; //reduce speed to 1/6
 								rightMotor.setSpeed(speed);
 								leftMotor.setSpeed(speed);
 								rightMotor.forward();
 								leftMotor.forward();
 							}
 						}
-						else
+						else //if it has gone 6 meters but not within 40 cm of wall
 						{
-							if(speed != rightMotor.getMaxSpeed() / 2)
+							if(speed != rightMotor.getMaxSpeed() / 2) //and speed has not been reduced
 							{
 								System.out.println("Reducing speed to 1/2");
 //								rightMotor.flt();
 //								leftMotor.flt();
-								speed = rightMotor.getMaxSpeed() / 2;
+								speed = rightMotor.getMaxSpeed() / 2; //reduce speed to 1/2
 								rightMotor.setSpeed(speed);
 								leftMotor.setSpeed(speed);
 								rightMotor.forward();
@@ -452,7 +454,7 @@ public class MarsNavigation {
 							}
 						}
 					}
-					if(rightMotor.isStalled() || leftMotor.isStalled())
+					if(rightMotor.isStalled() || frontSamples[0] <= 20) //if motors are stalled then go backwards
 					{
 						rightMotor.setSpeed(rightMotor.getMaxSpeed());
 						leftMotor.setSpeed(leftMotor.getMaxSpeed());
@@ -472,10 +474,12 @@ public class MarsNavigation {
 		}		
 		else if(press == Button.RIGHT.getId())
 		{
+			navigationChallenge = true;
 			leftMotor.setSpeed(125);
 			rightMotor.setSpeed(125);
 
 			setStatus(Status.Forward);
+			
 			startLocationMode();
 				
 			for(int i = 1; true; ++i)
@@ -604,23 +608,33 @@ public class MarsNavigation {
 				break;
 			}
 			
+			if(Button.ENTER.isDown())
+			{
+				leftMotor.stop();
+				rightMotor.stop();
+				realX = spaceDist / 2.0;
+				realY = 0.14; //distance from back of the robot to center
+				//above commands will cause Cell.getCurrentCell() to return (0, 0)
+				Button.LEDPattern(4);
+				Button.waitForAnyPress();
+				Button.LEDPattern(1);
+				setStatus(Status.Forward);
+			}
+			
 			System.out.println(Cell.getCurrentCell());
 			}
 		
-		}
-		
-		
-		
+		}	
 		
 	}
 
 	private static void correctVeer() {
 		int newSteerPos;
-		if( lSamples[0] < WALL_SENSITIVITY )
+		if( lSamples[0] < WALL_SENSITIVITY && navigationChallenge) //does this for challenge 1
 		{
-			newSteerPos = (int)((50 * (WALL_SENSITIVITY - lSamples[0])) + 4) * MULTIPLIER;
+			newSteerPos = (int)((50 * (WALL_SENSITIVITY - lSamples[0])) + 4) * MULTIPLIER; //if close to a wall, veer away from it
 		}
-		else if( rSamples[0] < WALL_SENSITIVITY )
+		else if( rSamples[0] < WALL_SENSITIVITY && navigationChallenge)
 		{
 			newSteerPos = (int)((-50 * (WALL_SENSITIVITY - rSamples[0])) - 4) * MULTIPLIER;
 		}
