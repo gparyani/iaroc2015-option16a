@@ -83,7 +83,7 @@ public class MarsNavigation {
 				break;
 			case Turning_Left:
 				turningFrom = Cell.getCurrentCell();
-				int backoffLeft = getBackoff();
+				int backoffLeft = getBackoff(Status.Turning_Left);
 				if(backoffLeft != 0)
 				{
 					steeringMotor.rotateTo(steeringRange / 3);
@@ -98,7 +98,7 @@ public class MarsNavigation {
 				break;
 			case Turning_Right:
 				turningFrom = Cell.getCurrentCell();
-				int backoffRight = getBackoff();
+				int backoffRight = getBackoff(Status.Turning_Right);
 				if(backoffRight != 0)
 				{
 					steeringMotor.rotateTo(-steeringRange / 3);
@@ -179,7 +179,6 @@ public class MarsNavigation {
 			rightMotor.forward();
 			leftMotor.forward();
 			break;
-
 		case Backward:
 			break;
 			
@@ -189,7 +188,7 @@ public class MarsNavigation {
 		}
 	}
 
-	private static int getBackoff() {
+	private static int getBackoff(Status st) {
 		double offset = 0;
 		Cell current = Cell.getCurrentCell();
 		Direction currentDir = Direction.getDirectionFromGyro();
@@ -212,10 +211,22 @@ public class MarsNavigation {
 		default:
 			return -60;
 		}
-		if(offset > 0)
+		if(currentStatus == Status.Backward)
+		{
+			offset = spaceDist - offset;
+		}
+		if(offset > 0.10)
 			offset -= 0.05;
-		else
-			offset += 0.05;
+//		if(st == Status.Turning_Left) 
+//		{
+//			if(offset > 0.10)
+//				offset -= 0.05;
+//		}
+//		if (st == Status.Turning_Right)
+//		{
+//			if(offset < 0.60)
+//				offset += 0.05;
+//		}
 		int toReturn = (int) ((-offset) * 412);
 		if(Math.abs(toReturn) < 30)
 			toReturn = 0;
@@ -566,10 +577,6 @@ public class MarsNavigation {
 			{
 			
 //Update Sensors
-			if(leftMotor.isStalled() || rightMotor.isStalled() )
-			{
-				recover(currentStatus);
-			}
 //			tachoReading = leftMotor.getTachoCount(); //TachoCount will get lower when moving backwards
 //			System.out.println("After getting values at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
 //			Left Following Strategy
@@ -606,7 +613,8 @@ public class MarsNavigation {
 //					}
 //					rightSense.fetchSample(rSamples, 0);
 //				}
-				if(rSamples[0]>=spaceDist)
+				Cell rCurrent = Cell.getCurrentCell();
+				if(rCurrent.getWallState(Direction.getDirectionFromGyro().getRightDirection()) != Cell.WallState.VIRTUAL_WALL && rSamples[0]>=spaceDist && !(rCurrent.equals(turningFrom)))
 				{
 					System.out.println("Right sense: "+rSamples[0]);
 					Cell.getCurrentCell().setWallState(Direction.getDirectionFromGyro(), Cell.WallState.VIRTUAL_WALL);
@@ -615,7 +623,7 @@ public class MarsNavigation {
 					angleSense.fetchSample(gyroAngles, 0);
 					
 				}
-				else if(leftMotor.isStalled() && rightMotor.isStalled())
+				else if(rCurrent.getWallState(Direction.getDirectionFromGyro().getOppositeDirection()) == Cell.WallState.VIRTUAL_WALL || leftMotor.isStalled() && rightMotor.isStalled())
 				{
 					setStatus(Status.Forward);
 				}
@@ -651,21 +659,25 @@ public class MarsNavigation {
 //					}
 //					leftSense.fetchSample(lSamples, 0);
 //				}
-				Cell current = Cell.getCurrentCell();
-				if(current.getWallState(Direction.getDirectionFromGyro().getLeftDirection()) == Cell.WallState.VIRTUAL_WALL || (lSamples[0]>=spaceDist && !(current.equals(turningFrom))))
+				Cell lCurrent = Cell.getCurrentCell();
+				if(lCurrent.getWallState(Direction.getDirectionFromGyro().getLeftDirection()) != Cell.WallState.VIRTUAL_WALL && (lSamples[0]>=spaceDist && !(lCurrent.equals(turningFrom))))
 				{
 					System.out.println("Left sense: " + lSamples[0]);
 					setStatus(Status.Turning_Left);
 					System.out.println("End Angle: " + endAngle);
 					angleSense.fetchSample(gyroAngles, 0);
 				}
-				else if(current.getWallState(Direction.getDirectionFromGyro()) == Cell.WallState.VIRTUAL_WALL || frontSamples[0]<30)
+				else if(lCurrent.getWallState(Direction.getDirectionFromGyro()) == Cell.WallState.VIRTUAL_WALL || frontSamples[0]<30)
 				{
 //					System.out.println("Moving Backward " + i);
 					setStatus(Status.Backward);
 				}
 				break;
 			case Turning_Left:
+				if(leftMotor.isStalled() || rightMotor.isStalled() )
+				{
+					recover(currentStatus);
+				}
 				angleSense.fetchSample(gyroAngles, 0);
 //				System.out.println("Current Angle: " + gyroAngles[0]);
 //				System.out.println("Desired Angle: " + endAngle);
@@ -676,6 +688,10 @@ public class MarsNavigation {
 				}
 				break;
 			case Turning_Right:
+				if(leftMotor.isStalled() || rightMotor.isStalled() )
+				{
+					recover(currentStatus);
+				}
 				angleSense.fetchSample(gyroAngles, 0);
 //				System.out.println("Current Angle: " + gyroAngles[0]);
 //				System.out.println("Desired Angle: " + endAngle);
