@@ -607,11 +607,13 @@ public class MarsNavigation {
 				break;
 			case Forward:
 				bothSense.fetchSample(bSamples, 0);
-				
+				seekSense.fetchSample(beaconData, 0);
 				correctVeer();
 				frontSense.fetchSample(frontSamples, 0);
 				System.out.println("Left distance:\t" + bSamples[0]);
 //				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
+				if(beaconData[1]<=15)
+					setStatus(null);
 				Cell lCurrent = Cell.getCurrentCell();
 				if( lCurrent != turningFrom ) turningFrom = null;
 				
