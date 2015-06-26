@@ -234,8 +234,40 @@ public class MarsNavigation {
 			return this;    //IN_BETWEEN's opposite direction is also IN_BETWEEN; compiler throws error if in switch statement itself
 
 		}
-
-
+		
+		Direction getLeftDirection()
+		{
+			switch(this) {
+			case NORTH:
+				return WEST;
+			case EAST:
+				return NORTH;
+			case SOUTH:
+				return EAST;
+			case WEST:
+				return SOUTH;
+			default:
+				break;
+			}
+			return this;
+		}
+		
+		Direction getRightDirection()
+		{
+			switch(this) {
+			case NORTH:
+				return EAST;
+				case EAST:
+					return SOUTH;
+				case SOUTH:
+					return WEST;
+				case WEST:
+					return NORTH;
+				default:
+					break;
+                }
+                return this;
+        }
 	}
 	
 	public static class Cell
@@ -280,6 +312,24 @@ public class MarsNavigation {
 			default:
 				break;
 			}
+		}
+		
+		public WallState getWallState(Direction dir)
+		{
+			switch(dir)
+			{
+			case NORTH:
+				return north;
+			case SOUTH:
+				return south;
+			case WEST:
+				return west;
+			case EAST:
+				return east;
+			default:
+				break;
+			}
+			throw new IllegalArgumentException("Can't obtain wall of IN_BETWEEN border");
 		}
 		
 		public boolean equals(Object obj)
@@ -422,7 +472,7 @@ public class MarsNavigation {
 					rightSense.fetchSample(rSamples, 0);
 					System.out.println("Front Reading: " + frontSamples[0]);
 					correctVeer();
-					if( leftMotor.getTachoCount() > (412 * 5)) // go max speed for 4 meters
+					if( leftMotor.getTachoCount() > (412 * 6)) // go max speed for 4 meters
 					{
 						if(frontSamples[0] <= 40) // if it is within 40 cm
 						{
@@ -569,14 +619,15 @@ public class MarsNavigation {
 //					}
 //					leftSense.fetchSample(lSamples, 0);
 //				}
-				if(lSamples[0]>=spaceDist && !(Cell.getCurrentCell().equals(turningFrom)))
+				Cell current = Cell.getCurrentCell();
+				if(current.getWallState(Direction.getDirectionFromGyro().getLeftDirection()) == Cell.WallState.VIRTUAL_WALL || (lSamples[0]>=spaceDist && !(current.equals(turningFrom))))
 				{
 					System.out.println("Left sense: " + lSamples[0]);
 					setStatus(Status.Turning_Left);
 					System.out.println("End Angle: " + endAngle);
 					angleSense.fetchSample(gyroAngles, 0);
 				}
-				else if(frontSamples[0]<30)
+				else if(current.getWallState(Direction.getDirectionFromGyro()) == Cell.WallState.VIRTUAL_WALL || frontSamples[0]<30)
 				{
 //					System.out.println("Moving Backward " + i);
 					setStatus(Status.Backward);
