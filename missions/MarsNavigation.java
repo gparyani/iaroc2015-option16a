@@ -83,15 +83,13 @@ public class MarsNavigation {
 				break;
 			case Turning_Left:
 				turningFrom = Cell.getCurrentCell();
-				leftMotor.setSpeed(100);
-				rightMotor.setSpeed(100);
-
-				steeringMotor.rotateTo(steeringRange / 3);
 				int backoffLeft = getBackoff();
-				rightMotor.rotate(backoffLeft, true);
-				leftMotor.rotate(backoffLeft);
-				leftMotor.setSpeed(125);
-				rightMotor.setSpeed(125);
+				if(backoffLeft != 0)
+				{
+					steeringMotor.rotateTo(steeringRange / 3);
+					rightMotor.rotate(backoffLeft, true);
+					leftMotor.rotate(backoffLeft);
+				}
 
 				steeringMotor.rotateTo(-(steeringRange/3));
 				rightMotor.forward();
@@ -100,15 +98,13 @@ public class MarsNavigation {
 				break;
 			case Turning_Right:
 				turningFrom = Cell.getCurrentCell();
-				leftMotor.setSpeed(100);
-				rightMotor.setSpeed(100);
-
-				steeringMotor.rotateTo(-steeringRange / 3);
 				int backoffRight = getBackoff();
-				rightMotor.rotate(backoffRight, true);
-				leftMotor.rotate(backoffRight);
-				leftMotor.setSpeed(125);
-				rightMotor.setSpeed(125);
+				if(backoffRight != 0)
+				{
+					steeringMotor.rotateTo(-steeringRange / 3);
+					rightMotor.rotate(backoffRight, true);
+					leftMotor.rotate(backoffRight);
+				}
 
 				steeringMotor.rotateTo(steeringRange/3);
 				rightMotor.forward();
@@ -122,15 +118,41 @@ public class MarsNavigation {
 	}
 	
 	private static void recover(Status st) {
-		
+		int orig_steer;
 		switch( st )
 		{
 		case Forward:
 			frontSamples[0] = 0 ;
 			break;
 		case Turning_Left:
+			orig_steer = steeringMotor.getTachoCount();
+			leftMotor.stop();
+			rightMotor.stop();
+			if( Cell.getCurrentCell() == turningFrom ) //if(gyroAngles[0] <= (endAngle - (4*ANGLE_ERROR_MARGIN)))
+			{
+				System.out.println("Recovering from stall; still in same cell");
+				leftMotor.rotate(-75, true); //Back off 7cm
+				rightMotor.rotate(-75);
+				steeringMotor.rotateTo(-orig_steer, true);
+				leftMotor.rotate(75, true); //Go forward 7 cm in other direction
+				rightMotor.rotate(75);
+			}
+			else
+			{
+				System.out.println("Recovering from stall; not in same cell");
+				steeringMotor.rotateTo(orig_steer, true);
+				leftMotor.rotate(-75, true); //Back off 10cm
+				rightMotor.rotate(-75);	
+				steeringMotor.rotateTo(0);
+				leftMotor.rotate(75);
+				rightMotor.rotate(75);
+				steeringMotor.rotateTo(orig_steer);
+			}
+			steeringMotor.rotateTo(orig_steer);
+			rightMotor.forward();
+			leftMotor.forward();
 		case Turning_Right:
-			int orig_steer = steeringMotor.getTachoCount();
+			orig_steer = steeringMotor.getTachoCount();
 			leftMotor.stop();
 			rightMotor.stop();
 			if( Cell.getCurrentCell() == turningFrom )
@@ -145,9 +167,13 @@ public class MarsNavigation {
 			else
 			{
 				System.out.println("Recovering from stall; not in same cell");
-				steeringMotor.rotateTo(-orig_steer, true);
+				steeringMotor.rotateTo(orig_steer, true);
 				leftMotor.rotate(-75, true); //Back off 10cm
 				rightMotor.rotate(-75);	
+				steeringMotor.rotateTo(0);
+				leftMotor.rotate(75);
+				rightMotor.rotate(75);
+				steeringMotor.rotateTo(orig_steer);
 			}
 			steeringMotor.rotateTo(orig_steer);
 			rightMotor.forward();
@@ -186,7 +212,13 @@ public class MarsNavigation {
 		default:
 			return -60;
 		}
-		int toReturn = (int) ((0.02 - offset) * 412);
+		if(offset > 0)
+			offset -= 0.05;
+		else
+			offset += 0.05;
+		int toReturn = (int) ((-offset) * 412);
+		if(Math.abs(toReturn) < 30)
+			toReturn = 0;
 		System.out.println("Backoff: " + toReturn);
 		return toReturn;
 	}
@@ -436,7 +468,7 @@ public class MarsNavigation {
 //Loop Function
 		Button.LEDPattern(1);
 		System.out.println("Calibration complete");
-	
+		
 		int press = Button.waitForAnyPress();
 		
 		if(press == Button.LEFT.getId()) //run challenge 1
@@ -667,6 +699,7 @@ public class MarsNavigation {
 				Button.LEDPattern(4);
 				Button.waitForAnyPress();
 				Button.LEDPattern(1);
+				gyroAngles[0] = 0;
 				setStatus(Status.Forward);
 			}
 			
@@ -741,7 +774,8 @@ public class MarsNavigation {
 		float leftDist = lSamples[0];
 		rightSense.fetchSample(rSamples, 0);
 		float rightDist = rSamples[0];
-		spaceDist = leftDist + rightDist + 0.185f+0.0762f; //19=robot + 0.0762 = wall width
+//		spaceDist = leftDist + rightDist + 0.185f+0.0762f; //19=robot + 0.0762 = wall width
+		spaceDist = 0.7f;
 		realX = spaceDist / 2.0;
 		realY = 0.14;
 		System.out.println("Left Space: " + leftDist);
