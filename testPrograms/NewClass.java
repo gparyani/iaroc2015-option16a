@@ -1,27 +1,24 @@
 package testPrograms;
 
-import java.util.Arrays;
-
-import lejos.hardware.Button;
-import lejos.hardware.port.I2CPort;
-import lejos.hardware.port.SensorPort;
-import lejos.hardware.sensor.I2CSensor;
+import ch.aplu.ev3.LegoRobot;
+import ch.aplu.ev3.SuperProSensor;
 
 public class NewClass {
 
 	public static void main(String[] args)
 	{
-		I2CPort port = new I2CSensor(SensorPort.S2).getPort();
-		byte[] toWrite = {1}, readout = new byte[92];
-		int address = 0x10;
-		while(Button.ESCAPE.isUp())
+		LegoRobot robot = new LegoRobot();
+		SuperProSensor sensor = new SuperProSensor(ch.aplu.ev3.SensorPort.S2);
+		robot.addPart(sensor);
+		
+		System.out.println(sensor.getVersion());
+		
+		int[] readout = new int[4];
+		
+		while(true)
 		{
-			port.i2cTransaction(address, toWrite, 0, 1, readout, 0, 92);
-			byte[] manufacturerBytes = Arrays.copyOfRange(readout, 0x08, 0x0f);
-			String manufacturer = new String(manufacturerBytes);
-			System.out.println(manufacturer);
-			byte[] a1read = Arrays.copyOfRange(readout, 0x44, 0x45);
-			System.out.println(a1read[0] << 2 + a1read[1]);
+			sensor.readAnalog(readout);
+			System.out.println(readout[1]);
 		}
 	}
 }

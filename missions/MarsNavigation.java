@@ -40,6 +40,7 @@ public class MarsNavigation {
 	static float[] bSamples = new float[2]; //index 0 is left, 1 is right
 //	static float[] lSamples = new float[1];
 	static float[] gyroAngles = new float[1];
+	static float[] beaconData = new float[8];
 	static int endAngle = 0;
 	static float spaceDist;
 	static volatile double realX;
@@ -52,6 +53,7 @@ public class MarsNavigation {
 //	static SampleProvider leftSense;
 	static SampleProvider angleSense;
 	static SensorMode frontSense;
+	static SensorMode seekSense;
 	static int steerPos = 0;
 	static Cell turningFrom;
 	static final float WALL_SENSITIVITY = 0.15f;
@@ -683,8 +685,69 @@ public class MarsNavigation {
 			System.out.println(Cell.getCurrentCell());
 			}
 		
-		}	
-		
+		}
+		else if(press == Button.UP.getId() || press == Button.DOWN.getId())
+		{
+			boolean go_left = (press == Button.DOWN.getId());
+			int target_angle = seekIR(1);
+			leftMotor.setSpeed(200);
+			rightMotor.setSpeed(200);
+
+			setStatus(Status.Forward);
+			
+//			startLocationMode();
+				
+			for(;;)
+			{
+				bothSense.fetchSample(bSamples, 0);
+				frontSense.fetchSample(frontSamples, 0); //TODO Use this as seeker next, keep switching or use different sensor?
+	//Update Sensors
+//				tachoReading = leftMotor.getTachoCount(); //TachoCount will get lower when moving backwards
+//				System.out.println("After getting values at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
+//				Left Following Strategy
+
+//TODO:			target_angle = seekIR(); //Is there a beacon, make it the end angle
+				if( frontSamples[0]>30 ) //Front clear - pursue goal
+				{
+
+					endAngle = target_angle;
+				}
+				else //TODO OR if is motor stalled
+				{
+					rightMotor.stop();
+					leftMotor.stop();
+
+					if( bSamples[0] < WALL_SENSITIVITY ) {
+						go_left = false;
+					}
+					else if( bSamples[1] < WALL_SENSITIVITY  ) {
+						go_left = true;
+					}
+					
+					rightMotor.backward();
+					leftMotor.backward();
+					Delay.msDelay(1000);
+					if( go_left )
+						steeringMotor.rotateTo(-(steeringRange/3), true); //Start going to left
+					else
+						steeringMotor.rotateTo((steeringRange/3), true); //Start going to right
+	
+					rightMotor.forward();
+					leftMotor.forward();
+					Delay.msDelay(1000);
+				}
+
+				correctVeer(); //steer away from wall/ steer toward endAngle
+			}
+
+
+		}
+	}
+
+	private static int seekIR(int channel) {
+		int position = 2 * (--channel);
+		seekSense.fetchSample(beaconData, 0);
+		return (int) beaconData[position];
 	}
 
 	private static void correctVeer() {
@@ -763,6 +826,7 @@ public class MarsNavigation {
 //		leftSensor.enable();
 //		rightSense = rightSensor.getDistanceMode();
 //		leftSense = leftSensor.getDistanceMode();
+		seekSense = irSensor.getSeekMode();
 	}
 
 	private static void initializeMotors() {
@@ -804,26 +868,26 @@ public class MarsNavigation {
 		t.start();
 	}
 	
-	private static int correctAngle(float angleEstimate)
-	{
-		float quotient;
-		float remainder;
-		quotient = angleEstimate/90;
-		remainder = angleEstimate%90;
-		if(remainder>=0)
-		{
-			if(remainder>=45)
-			{
-				quotient+=1;
-			}	
-		}
-		else
-		{
-			if(remainder<=-45)
-			{
-				quotient-=1;
-			}
-		}
-		return (int)quotient*90;
-	}
+//	private static int correctAngle(float angleEstimate)
+//	{
+//		float quotient;
+//		float remainder;
+//		quotient = angleEstimate/90;
+//		remainder = angleEstimate%90;
+//		if(remainder>=0)
+//		{
+//			if(remainder>=45)
+//			{
+//				quotient+=1;
+//			}	
+//		}
+//		else
+//		{
+//			if(remainder<=-45)
+//			{
+//				quotient-=1;
+//			}
+//		}
+//		return (int)quotient*90;
+//	}
 }

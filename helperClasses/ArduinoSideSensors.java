@@ -75,6 +75,28 @@ public class ArduinoSideSensors {
 	}
 	
 	/**
+	 * Returns a {@link SampleProvider} that obtains values from the left side sensor.
+	 * @return the {@link SampleProvider} for the left sensor
+	 */
+	public SampleProvider getLeftSensorMode()
+	{
+		return new SampleProvider()
+		{
+			@Override
+			public int sampleSize() {
+				return 1;
+			}
+
+			@Override
+			public void fetchSample(float[] sample, int offset) {
+				getValues();
+				sample[offset] = leftValue * 0.01f;
+			}
+			
+		};
+	}
+	
+	/**
 	 * Returns a {@link SampleProvider} that obtains values from the right side sensor.
 	 * @return the {@link SampleProvider} for the right sensor
 	 */
