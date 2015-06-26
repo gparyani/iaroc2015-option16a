@@ -695,11 +695,20 @@ public class MarsNavigation {
 				rightMotor.stop();
 				realX = spaceDist / 2.0; //refreshes coordinates
 				realY = 0.14; //distance from back of the robot to center
+				currentStatus = null;
+				turningFrom = null;
 				//above commands will cause Cell.getCurrentCell() to return (0, 0)
 				Button.LEDPattern(4);
 				Button.waitForAnyPress();
 				Button.LEDPattern(1);
 				gyroAngles[0] = 0;
+				Delay.msDelay(200);
+				gyro.reset();
+				Delay.msDelay(1000);
+				leftMotor.resetTachoCount();
+				rightMotor.resetTachoCount();
+				endAngle = 0;
+				
 				setStatus(Status.Forward);
 			}
 			
