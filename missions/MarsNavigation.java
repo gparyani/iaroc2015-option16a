@@ -689,9 +689,9 @@ public class MarsNavigation {
 		else if(press == Button.UP.getId() || press == Button.DOWN.getId())
 		{
 			boolean go_left = (press == Button.DOWN.getId());
-			int target_angle = 2 * seekIR(1);
-			leftMotor.setSpeed(200);
-			rightMotor.setSpeed(200);
+			int target_angle;
+			leftMotor.setSpeed(150);
+			rightMotor.setSpeed(150);
 
 			setStatus(Status.Forward);
 			
@@ -699,6 +699,7 @@ public class MarsNavigation {
 				
 			for(;;)
 			{
+				target_angle = trueMultiplier * seekIR(1) + 10;
 				bothSense.fetchSample(bSamples, 0);
 				frontSense.fetchSample(frontSamples, 0); //TODO Use this as seeker next, keep switching or use different sensor?
 	//Update Sensors
