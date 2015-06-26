@@ -25,6 +25,7 @@ public class MarsNavigation {
 //	static NXTUltrasonicSensor leftSensor;
 	static ArduinoSideSensors sideSensors;
 	static EV3IRSensor irSensor;
+	static EV3IRSensor irSeekSensor;
 	static int steeringRange;
 	static final int MULTIPLIER = 3;
 	static int trueMultiplier = MULTIPLIER;
@@ -689,7 +690,7 @@ public class MarsNavigation {
 		else if(press == Button.UP.getId() || press == Button.DOWN.getId())
 		{
 			boolean go_left = (press == Button.DOWN.getId());
-			int target_angle;
+			int target_angle = 0;
 			leftMotor.setSpeed(150);
 			rightMotor.setSpeed(150);
 
@@ -699,7 +700,11 @@ public class MarsNavigation {
 				
 			for(;;)
 			{
-				target_angle = trueMultiplier * seekIR(1) + 10;
+				int seek = seekIR(1);
+				if(seek>0)
+					target_angle = trueMultiplier * seek + 10;
+				else if(seek<0)
+					target_angle = trueMultiplier * seek - 10;
 				bothSense.fetchSample(bSamples, 0);
 				frontSense.fetchSample(frontSamples, 0); //TODO Use this as seeker next, keep switching or use different sensor?
 	//Update Sensors
@@ -728,10 +733,35 @@ public class MarsNavigation {
 					rightMotor.backward();
 					leftMotor.backward();
 					Delay.msDelay(1000);
+//					TODO: Maybe add rotating 360 degrees in search of beacon
+//					leftMotor.stop();
+//					rightMotor.stop();
+//					angleSense.fetchSample(gyroAngles, 0);
+//					float initialAngle = gyroAngles[0];
+//					steeringMotor.rotateTo(steeringRange/3);
+//					leftMotor.forward();
+//					rightMotor.forward();
+//					float currentAngle;
+//					do
+//					{ 
+//						angleSense.fetchSample(gyroAngles, 0);
+//						currentAngle = gyroAngles[0];
+//						seek = seekIR(1);
+//					}while(seek == 0 && currentAngle != initialAngle);
 					if( go_left )
-						steeringMotor.rotateTo(-(steeringRange/3), true); //Start going to left
+					{
+						if(seek != 0)
+							steeringMotor.rotateTo(-(steeringRange/4), true); //Go left less, beacon in sight
+						else
+							steeringMotor.rotateTo(-(steeringRange/3), true); //Start going to left
+					}
 					else
-						steeringMotor.rotateTo((steeringRange/3), true); //Start going to right
+					{
+						if(seek!=0)
+							steeringMotor.rotateTo((steeringRange/4), true); //Go right less, beacon in sight
+						else
+							steeringMotor.rotateTo((steeringRange/3), true); //Start going to right
+					}
 	
 					rightMotor.forward();
 					leftMotor.forward();
@@ -807,6 +837,7 @@ public class MarsNavigation {
 //		rightSensor = new NXTUltrasonicSensor(SensorPort.S3);
 //		leftSensor = new NXTUltrasonicSensor(SensorPort.S2);
 		sideSensors = new ArduinoSideSensors(SensorPort.S2, 4);
+		irSeekSensor = new EV3IRSensor(SensorPort.S3);
 		irSensor = new EV3IRSensor(SensorPort.S4);
 
 		bothSense = sideSensors.getBothSensorMode();
@@ -823,11 +854,12 @@ public class MarsNavigation {
 		System.out.println("Right Space: " + rightDist);
 		System.out.println("Total Space:" + spaceDist);
 		frontSense = irSensor.getDistanceMode();
+		
 //		rightSensor.enable();
 //		leftSensor.enable();
 //		rightSense = rightSensor.getDistanceMode();
 //		leftSense = leftSensor.getDistanceMode();
-		seekSense = irSensor.getSeekMode();
+		seekSense = irSeekSensor.getSeekMode();
 	}
 
 	private static void initializeMotors() {
