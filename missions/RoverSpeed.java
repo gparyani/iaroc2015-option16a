@@ -54,7 +54,7 @@ public class RoverSpeed {
 	static SensorMode frontSense;
 	static int steerPos = 0;
 	static Cell turningFrom;
-	static final float WALL_SENSITIVITY = 0.15f;
+	static final float WALL_SENSITIVITY = 0.25f;
 	
 	public static Status getStatus()
 	{
@@ -402,6 +402,11 @@ public class RoverSpeed {
 				switch(getStatus()){
 				case Backward:
 					correctVeer();
+					speed = rightMotor.getMaxSpeed() / 4;
+					rightMotor.setSpeed(speed);
+					leftMotor.setSpeed(speed);
+					rightMotor.backward();
+					leftMotor.backward();
 					if(reading <= 412)
 					{
 						speed = rightMotor.getMaxSpeed() / 4;
