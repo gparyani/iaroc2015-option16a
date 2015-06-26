@@ -37,8 +37,8 @@ public class MarsNavigation {
 	private static Status currentStatus;
 	static int ANGLE_ERROR_MARGIN = 5;
 	static float[] frontSamples = new float[1];
-	static float[] rSamples = new float[1];
-	static float[] lSamples = new float[1];
+	static float[] bSamples = new float[2]; //index 0 is left, 1 is right
+//	static float[] lSamples = new float[1];
 	static float[] gyroAngles = new float[1];
 	static int endAngle = 0;
 	static float spaceDist;
@@ -48,13 +48,14 @@ public class MarsNavigation {
 	static int rPrevTacho = 0;
 	static EV3GyroSensor gyro;
 	static long beginningTime;
-	static SampleProvider rightSense;
-	static SampleProvider leftSense;
+	static SampleProvider bothSense;
+//	static SampleProvider leftSense;
 	static SampleProvider angleSense;
 	static SensorMode frontSense;
 	static int steerPos = 0;
 	static Cell turningFrom;
 	static final float WALL_SENSITIVITY = 0.15f;
+	static Direction currentBearing = Direction.NORTH;
 	
 	public static Status getStatus()
 	{
@@ -76,6 +77,7 @@ public class MarsNavigation {
 				trueMultiplier = -MULTIPLIER;
 				break;
 			case Forward:
+				currentBearing = Direction.getDirectionFromGyro();
 				steeringMotor.rotateTo(0);
 				rightMotor.forward();
 				leftMotor.forward();
@@ -94,7 +96,8 @@ public class MarsNavigation {
 				steeringMotor.rotateTo(-(steeringRange/3));
 				rightMotor.forward();
 				leftMotor.forward();
-				endAngle = correctAngle(gyroAngles[0])+90;
+				endAngle += 90;
+//				endAngle = correctAngle(gyroAngles[0])+90;
 				break;
 			case Turning_Right:
 				turningFrom = Cell.getCurrentCell();
@@ -109,7 +112,8 @@ public class MarsNavigation {
 				steeringMotor.rotateTo(steeringRange/3);
 				rightMotor.forward();
 				leftMotor.forward();
-				endAngle = correctAngle(gyroAngles[0])-90;
+				endAngle -= 90;
+//				endAngle = correctAngle(gyroAngles[0])-90;
 			default:
 				break;
 			}
@@ -131,22 +135,18 @@ public class MarsNavigation {
 			if( Cell.getCurrentCell() == turningFrom ) //if(gyroAngles[0] <= (endAngle - (4*ANGLE_ERROR_MARGIN)))
 			{
 				System.out.println("Recovering from stall; still in same cell");
-				leftMotor.rotate(-75, true); //Back off 7cm
-				rightMotor.rotate(-75);
-				steeringMotor.rotateTo(-orig_steer, true);
-				leftMotor.rotate(75, true); //Go forward 7 cm in other direction
-				rightMotor.rotate(75);
+				leftMotor.rotate(-90, true); //Back off 7cm
+				rightMotor.rotate(-90);
+				steeringMotor.rotateTo((steeringRange/3), true);
+				leftMotor.rotate(135, true); //Go forward 7 cm in other direction
+				rightMotor.rotate(135);
 			}
 			else
 			{
 				System.out.println("Recovering from stall; not in same cell");
-				steeringMotor.rotateTo(orig_steer, true);
-				leftMotor.rotate(-75, true); //Back off 10cm
-				rightMotor.rotate(-75);	
-				steeringMotor.rotateTo(0);
-				leftMotor.rotate(75);
-				rightMotor.rotate(75);
-				steeringMotor.rotateTo(orig_steer);
+				steeringMotor.rotateTo((steeringRange/3), true);
+				leftMotor.rotate(-90, true); //Back off 10cm
+				rightMotor.rotate(-90);	
 			}
 			steeringMotor.rotateTo(orig_steer);
 			rightMotor.forward();
@@ -158,22 +158,18 @@ public class MarsNavigation {
 			if( Cell.getCurrentCell() == turningFrom )
 			{
 				System.out.println("Recovering from stall; still in same cell");
-				leftMotor.rotate(-75, true); //Back off 7cm
-				rightMotor.rotate(-75);
-				steeringMotor.rotateTo(-orig_steer, true);
-				leftMotor.rotate(75, true); //Go forward 7 cm in other direction
-				rightMotor.rotate(75);
+				leftMotor.rotate(-90, true); 
+				rightMotor.rotate(-90);
+				steeringMotor.rotateTo(-(steeringRange/3), true);
+				leftMotor.rotate(135, true); 
+				rightMotor.rotate(135);
 			}
 			else
 			{
 				System.out.println("Recovering from stall; not in same cell");
-				steeringMotor.rotateTo(orig_steer, true);
-				leftMotor.rotate(-75, true); //Back off 10cm
-				rightMotor.rotate(-75);	
-				steeringMotor.rotateTo(0);
-				leftMotor.rotate(75);
-				rightMotor.rotate(75);
-				steeringMotor.rotateTo(orig_steer);
+				steeringMotor.rotateTo(-(steeringRange/3), true);
+				leftMotor.rotate(-90, true); 
+				rightMotor.rotate(-90);	
 			}
 			steeringMotor.rotateTo(orig_steer);
 			rightMotor.forward();
@@ -191,7 +187,7 @@ public class MarsNavigation {
 	private static int getBackoff(Status st) {
 		double offset = 0;
 		Cell current = Cell.getCurrentCell();
-		Direction currentDir = Direction.getDirectionFromGyro();
+		Direction currentDir = currentBearing;
 		System.out.println(currentDir);
 		System.out.println("[" + realX + ", " + realY + "]");
 		switch(currentDir)
@@ -215,8 +211,8 @@ public class MarsNavigation {
 		{
 			offset = spaceDist - offset;
 		}
-		if(offset > 0.10)
-			offset -= 0.05;
+		if(offset > 0.25)
+			offset -= 0.20;
 //		if(st == Status.Turning_Left) 
 //		{
 //			if(offset > 0.10)
@@ -511,8 +507,8 @@ public class MarsNavigation {
 					break;
 				case Forward:
 					frontSense.fetchSample(frontSamples, 0);
-					leftSense.fetchSample(lSamples, 0);
-					rightSense.fetchSample(rSamples, 0);
+					bothSense.fetchSample(bSamples, 0);
+//					rightSense.fetchSample(rSamples, 0);
 					System.out.println("Front Reading: " + frontSamples[0]);
 					correctVeer();
 					if( leftMotor.getTachoCount() > (412 * 6)) // go max speed for 4 meters
@@ -582,92 +578,48 @@ public class MarsNavigation {
 //			Left Following Strategy
 			switch(getStatus()){
 			case Backward:
-				rightSense.fetchSample(rSamples, 0);
+				bothSense.fetchSample(bSamples, 0);
+				System.out.println("Right distance:\t" + bSamples[1]);
+//				leftSense.fetchSample(lSamples, 0);				
 //				angleSense.fetchSample(gyroAngles, 0);
 //				System.out.println("Current Gyro Angle: " + gyroAngles[0]);
 				correctVeer();
 //				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
-//				tachoReading = leftMotor.getTachoCount();
-//				if(rSamples[0] == Float.POSITIVE_INFINITY)
-//				{
-//					angleSense.fetchSample(gyroAngles, 0);
-//					if(correctAngle(gyroAngles[0])-gyroAngles[0]>0)
-//					{
-//						steeringMotor.rotateTo(-5);
-//						leftMotor.rotate(15);
-//						rightMotor.rotate(15);
-//						steeringMotor.rotateTo(5);
-//						leftMotor.rotate(-15);
-//						rightMotor.rotate(-15);
-//						steeringMotor.rotateTo(0);
-//					}
-//					else if(correctAngle(gyroAngles[0])-gyroAngles[0]<0)
-//					{
-//						steeringMotor.rotateTo(5);
-//						leftMotor.rotate(15);
-//						rightMotor.rotate(15);
-//						steeringMotor.rotateTo(-5);
-//						leftMotor.rotate(-15);
-//						rightMotor.rotate(-15);
-//						steeringMotor.rotateTo(0);	
-//					}
-//					rightSense.fetchSample(rSamples, 0);
-//				}
+
 				Cell rCurrent = Cell.getCurrentCell();
-				if(rCurrent.getWallState(Direction.getDirectionFromGyro().getRightDirection()) != Cell.WallState.VIRTUAL_WALL && rSamples[0]>=spaceDist && !(rCurrent.equals(turningFrom)))
+				if(rCurrent.getWallState(currentBearing.getRightDirection()) != Cell.WallState.VIRTUAL_WALL 
+					&& bSamples[1]>=spaceDist && !(rCurrent.equals(turningFrom)))
 				{
-					System.out.println("Right sense: "+rSamples[0]);
-					Cell.getCurrentCell().setWallState(Direction.getDirectionFromGyro(), Cell.WallState.VIRTUAL_WALL);
+					System.out.println("Right sense: "+bSamples[1]+ "Placing VWALL on"+rCurrent.toString()+" For " + currentBearing.toString());
+					rCurrent.setWallState(currentBearing, Cell.WallState.VIRTUAL_WALL);
 					setStatus(Status.Turning_Right);
 //					System.out.println("End Angle: " + endAngle);
 					angleSense.fetchSample(gyroAngles, 0);
 					
 				}
-				else if(rCurrent.getWallState(Direction.getDirectionFromGyro().getOppositeDirection()) == Cell.WallState.VIRTUAL_WALL || leftMotor.isStalled() && rightMotor.isStalled())
+				else if(rCurrent.getWallState(currentBearing.getOppositeDirection()) == Cell.WallState.VIRTUAL_WALL || leftMotor.isStalled() || rightMotor.isStalled())
 				{
 					setStatus(Status.Forward);
 				}
 				break;
 			case Forward:
-				leftSense.fetchSample(lSamples, 0);
+				bothSense.fetchSample(bSamples, 0);
+				
 				correctVeer();
 				frontSense.fetchSample(frontSamples, 0);
-//				System.out.println("Distance:\t" + frontSamples[0]);
+				System.out.println("Left distance:\t" + bSamples[0]);
 //				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
-//				if(lSamples[0] == Float.POSITIVE_INFINITY)
-//				{
-//					angleSense.fetchSample(gyroAngles, 0);
-//					if(correctAngle(gyroAngles[0])-gyroAngles[0]>0)
-//					{
-//						steeringMotor.rotateTo(5);
-//						leftMotor.rotate(-15);
-//						rightMotor.rotate(-15);
-//						steeringMotor.rotateTo(-5);
-//						leftMotor.rotate(15);
-//						rightMotor.rotate(15);
-//						steeringMotor.rotateTo(0);
-//					}
-//					else if(correctAngle(gyroAngles[0])-gyroAngles[0]<0)
-//					{
-//						steeringMotor.rotateTo(-5);
-//						leftMotor.rotate(-15);
-//						rightMotor.rotate(-15);
-//						steeringMotor.rotateTo(5);
-//						leftMotor.rotate(15);
-//						rightMotor.rotate(15);
-//						steeringMotor.rotateTo(0);	
-//					}
-//					leftSense.fetchSample(lSamples, 0);
-//				}
 				Cell lCurrent = Cell.getCurrentCell();
-				if(lCurrent.getWallState(Direction.getDirectionFromGyro().getLeftDirection()) != Cell.WallState.VIRTUAL_WALL && (lSamples[0]>=spaceDist && !(lCurrent.equals(turningFrom))))
+				if( lCurrent != turningFrom ) turningFrom = null;
+				
+				if(lCurrent.getWallState(currentBearing.getLeftDirection()) != Cell.WallState.VIRTUAL_WALL && (bSamples[0]>=spaceDist && !(lCurrent.equals(turningFrom))))
 				{
-					System.out.println("Left sense: " + lSamples[0]);
+					System.out.println("Left sense: " + bSamples[0]);
 					setStatus(Status.Turning_Left);
 					System.out.println("End Angle: " + endAngle);
 					angleSense.fetchSample(gyroAngles, 0);
 				}
-				else if(lCurrent.getWallState(Direction.getDirectionFromGyro()) == Cell.WallState.VIRTUAL_WALL || frontSamples[0]<30)
+				else if(lCurrent.getWallState(currentBearing) == Cell.WallState.VIRTUAL_WALL || frontSamples[0]<30)
 				{
 //					System.out.println("Moving Backward " + i);
 					setStatus(Status.Backward);
@@ -720,11 +672,11 @@ public class MarsNavigation {
 				gyroAngles[0] = 0;
 				Delay.msDelay(200);
 				gyro.reset();
-				Delay.msDelay(1000);
+				Delay.msDelay(2000);
 				leftMotor.resetTachoCount();
 				rightMotor.resetTachoCount();
 				endAngle = 0;
-				
+				currentBearing = Direction.NORTH;
 				setStatus(Status.Forward);
 			}
 			
@@ -737,13 +689,13 @@ public class MarsNavigation {
 
 	private static void correctVeer() {
 		int newSteerPos;
-		if( lSamples[0] < WALL_SENSITIVITY) //does this for challenge 1
+		if( bSamples[0] < WALL_SENSITIVITY) //does this for challenge 1
 		{
-			newSteerPos = (int)((50 * (WALL_SENSITIVITY - lSamples[0])) + 4) * MULTIPLIER; //if close to a wall, veer away from it
+			newSteerPos = (int)((60 * (WALL_SENSITIVITY - bSamples[0])) + 4) * MULTIPLIER; //if close to a wall, veer away from it
 		}
-		else if( rSamples[0] < WALL_SENSITIVITY)
+		else if( bSamples[1] < WALL_SENSITIVITY)
 		{
-			newSteerPos = (int)((-50 * (WALL_SENSITIVITY - rSamples[0])) - 4) * MULTIPLIER;
+			newSteerPos = (int)((-60 * (WALL_SENSITIVITY - bSamples[1])) - 4) * MULTIPLIER;
 		}
 		else
 		{
@@ -792,13 +744,13 @@ public class MarsNavigation {
 //		leftSensor = new NXTUltrasonicSensor(SensorPort.S2);
 		sideSensors = new ArduinoSideSensors(SensorPort.S2, 4);
 		irSensor = new EV3IRSensor(SensorPort.S4);
-		rightSense = sideSensors.getRightSensorMode();
-		leftSense = sideSensors.getLeftSensorMode();
+
+		bothSense = sideSensors.getBothSensorMode();
 		//Adapts to all size boxes
-		leftSense.fetchSample(lSamples, 0);
-		float leftDist = lSamples[0];
-		rightSense.fetchSample(rSamples, 0);
-		float rightDist = rSamples[0];
+		bothSense.fetchSample(bSamples, 0);
+		float leftDist = bSamples[0];
+//		rightSense.fetchSample(bSamples, 0);
+		float rightDist = bSamples[1];
 //		spaceDist = leftDist + rightDist + 0.185f+0.0762f; //19=robot + 0.0762 = wall width
 		spaceDist = 0.7f;
 		realX = spaceDist / 2.0;
