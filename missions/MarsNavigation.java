@@ -589,11 +589,11 @@ public class MarsNavigation {
 //				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
 
 				Cell rCurrent = Cell.getCurrentCell();
+				System.out.println("Right sense: "+bSamples[1]+ "Placing VWALL on"+rCurrent.toString()+" For " + currentBearing.toString());
+				rCurrent.setWallState(currentBearing, Cell.WallState.VIRTUAL_WALL);
 				if(rCurrent.getWallState(currentBearing.getRightDirection()) != Cell.WallState.VIRTUAL_WALL 
 					&& bSamples[1]>=spaceDist && !(rCurrent.equals(turningFrom)))
 				{
-					System.out.println("Right sense: "+bSamples[1]+ "Placing VWALL on"+rCurrent.toString()+" For " + currentBearing.toString());
-					rCurrent.setWallState(currentBearing, Cell.WallState.VIRTUAL_WALL);
 					setStatus(Status.Turning_Right);
 //					System.out.println("End Angle: " + endAngle);
 					angleSense.fetchSample(gyroAngles, 0);
@@ -689,7 +689,7 @@ public class MarsNavigation {
 		else if(press == Button.UP.getId() || press == Button.DOWN.getId())
 		{
 			boolean go_left = (press == Button.DOWN.getId());
-			int target_angle = seekIR(1);
+			int target_angle = 2 * seekIR(1);
 			leftMotor.setSpeed(200);
 			rightMotor.setSpeed(200);
 
