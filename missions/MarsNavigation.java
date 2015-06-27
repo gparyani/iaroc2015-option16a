@@ -4,6 +4,7 @@ import helperClasses.ArduinoSideSensors;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.Stack;
 
 import lejos.hardware.Button;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
@@ -57,6 +58,8 @@ public class MarsNavigation {
 	static SensorMode seekSense;
 	static int steerPos = 0;
 	static Cell turningFrom;
+	static Cell prevCell = null;
+	static Stack cellStack = new Stack<Cell>();
 	static final float WALL_SENSITIVITY = 0.15f;
 	static Direction currentBearing = Direction.NORTH;
 	
@@ -571,6 +574,7 @@ public class MarsNavigation {
 			setStatus(Status.Forward);
 			
 			startLocationMode();
+			Cell current;
 				
 			for(int i = 1; true; ++i)
 			{
@@ -589,18 +593,27 @@ public class MarsNavigation {
 				correctVeer();
 //				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
 
-				Cell rCurrent = Cell.getCurrentCell();
-				System.out.println("Right sense: "+bSamples[1]+ "Placing VWALL on"+rCurrent.toString()+" For " + currentBearing.toString());
-				rCurrent.setWallState(currentBearing, Cell.WallState.VIRTUAL_WALL);
-				if(rCurrent.getWallState(currentBearing.getRightDirection()) != Cell.WallState.VIRTUAL_WALL 
-					&& bSamples[1]>=spaceDist && !(rCurrent.equals(turningFrom)))
+				current = Cell.getCurrentCell();
+				int cellPosition = cellStack.search(current);
+				if(cellPosition != -1)
+				{
+					for(int n=1;n<cellPosition;n++)
+					{
+						cellStack.pop();
+					}
+					current.setWallState(currentBearing, Cell.WallState.VIRTUAL_WALL);
+				}
+				prevCell = current;
+				System.out.println("Right sense: "+bSamples[1]+ "Placing VWALL on"+current.toString()+" For " + currentBearing.toString());
+				if(current.getWallState(currentBearing.getRightDirection()) != Cell.WallState.VIRTUAL_WALL 
+					&& bSamples[1]>=spaceDist && !(current.equals(turningFrom)))
 				{
 					setStatus(Status.Turning_Right);
 //					System.out.println("End Angle: " + endAngle);
 					angleSense.fetchSample(gyroAngles, 0);
 					
 				}
-				else if(rCurrent.getWallState(currentBearing.getOppositeDirection()) == Cell.WallState.VIRTUAL_WALL || leftMotor.isStalled() || rightMotor.isStalled())
+				else if(current.getWallState(currentBearing.getOppositeDirection()) == Cell.WallState.VIRTUAL_WALL || leftMotor.isStalled() || rightMotor.isStalled())
 				{
 					setStatus(Status.Forward);
 				}
@@ -614,23 +627,34 @@ public class MarsNavigation {
 //				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
 				if(beaconData[1]<=15)
 					setStatus(null);
-				Cell lCurrent = Cell.getCurrentCell();
-				if( lCurrent != turningFrom ) turningFrom = null;
+				current = Cell.getCurrentCell();
+				if(current != prevCell)
+				{
+					cellStack.push(current);
+					prevCell = current;
+				}
+				if( current != turningFrom ) turningFrom = null;
 				
-				if(lCurrent.getWallState(currentBearing.getLeftDirection()) != Cell.WallState.VIRTUAL_WALL && (bSamples[0]>=spaceDist && !(lCurrent.equals(turningFrom))))
+				if(current.getWallState(currentBearing.getLeftDirection()) != Cell.WallState.VIRTUAL_WALL && (bSamples[0]>=spaceDist && !(current.equals(turningFrom))))
 				{
 					System.out.println("Left sense: " + bSamples[0]);
 					setStatus(Status.Turning_Left);
 					System.out.println("End Angle: " + endAngle);
 					angleSense.fetchSample(gyroAngles, 0);
 				}
-				else if(lCurrent.getWallState(currentBearing) == Cell.WallState.VIRTUAL_WALL || frontSamples[0]<30)
+				else if(current.getWallState(currentBearing) == Cell.WallState.VIRTUAL_WALL || frontSamples[0]<30)
 				{
 //					System.out.println("Moving Backward " + i);
 					setStatus(Status.Backward);
 				}
 				break;
 			case Turning_Left:
+				current = Cell.getCurrentCell();
+				if(current != prevCell)
+				{
+					cellStack.push(current);
+					prevCell = current;
+				}
 				if(leftMotor.isStalled() || rightMotor.isStalled() )
 				{
 					recover(currentStatus);
@@ -645,6 +669,12 @@ public class MarsNavigation {
 				}
 				break;
 			case Turning_Right:
+				current = Cell.getCurrentCell();
+				if(current != prevCell)
+				{
+					cellStack.push(current);
+					prevCell = current;
+				}
 				if(leftMotor.isStalled() || rightMotor.isStalled() )
 				{
 					recover(currentStatus);
