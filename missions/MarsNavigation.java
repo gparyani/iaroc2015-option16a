@@ -693,8 +693,8 @@ public class MarsNavigation {
 		{
 			boolean go_left = (press == Button.DOWN.getId());
 			int target_angle = 0;
-			leftMotor.setSpeed(150);
-			rightMotor.setSpeed(150);
+			leftMotor.setSpeed(200);
+			rightMotor.setSpeed(200);
 
 			setStatus(Status.Forward);
 			
@@ -715,59 +715,76 @@ public class MarsNavigation {
 //				Left Following Strategy
 
 //TODO:			target_angle = seekIR(); //Is there a beacon, make it the end angle
-				if( frontSamples[0]>30 ) //Front clear - pursue goal
+				if(seek != 0)
 				{
-
-					endAngle = target_angle;
-				}
-				else //TODO OR if is motor stalled
-				{
-					rightMotor.stop();
-					leftMotor.stop();
-
-					if( bSamples[0] < WALL_SENSITIVITY ) {
-						go_left = false;
-					}
-					else if( bSamples[1] < WALL_SENSITIVITY  ) {
-						go_left = true;
-					}
-					
-					rightMotor.backward();
-					leftMotor.backward();
-					Delay.msDelay(1000);
-//					TODO: Maybe add rotating 360 degrees in search of beacon
-//					leftMotor.stop();
-//					rightMotor.stop();
-//					angleSense.fetchSample(gyroAngles, 0);
-//					float initialAngle = gyroAngles[0];
-//					steeringMotor.rotateTo(steeringRange/3);
-//					leftMotor.forward();
-//					rightMotor.forward();
-//					float currentAngle;
-//					do
-//					{ 
-//						angleSense.fetchSample(gyroAngles, 0);
-//						currentAngle = gyroAngles[0];
-//						seek = seekIR(1);
-//					}while(seek == 0 && currentAngle != initialAngle);
-					if( go_left )
+					Button.LEDPattern(4);
+					if(frontSamples[0]<=30 || leftMotor.isStalled() || rightMotor.isStalled())
 					{
-						if(seek != 0)
+						rightMotor.stop();
+						leftMotor.stop();
+
+						if( bSamples[0] < WALL_SENSITIVITY ) {
+							go_left = false;
+						}
+						else if( bSamples[1] < WALL_SENSITIVITY  ) {
+							go_left = true;
+						}
+						
+						rightMotor.backward();
+						leftMotor.backward();
+						Delay.msDelay(500);
+						if( go_left )
+						{
 							steeringMotor.rotateTo(-(steeringRange/4), true); //Go left less, beacon in sight
+							
+						}
 						else
-							steeringMotor.rotateTo(-(steeringRange/3), true); //Start going to left
+						{
+							steeringMotor.rotateTo((steeringRange/4), true); //Go right less, beacon in sight
+						}
+		
+						rightMotor.forward();
+						leftMotor.forward();
+						Delay.msDelay(1000);
+					}
+					else //Front clear - pursue goal
+					{
+						endAngle = target_angle;
+					}
+				}
+				else
+				{
+					if(frontSamples[0]>30)
+					{
+						endAngle = target_angle;
 					}
 					else
 					{
-						if(seek!=0)
-							steeringMotor.rotateTo((steeringRange/4), true); //Go right less, beacon in sight
+						rightMotor.stop();
+						leftMotor.stop();
+
+						if( bSamples[0] < WALL_SENSITIVITY ) {
+							go_left = false;
+						}
+						else if( bSamples[1] < WALL_SENSITIVITY  ) {
+							go_left = true;
+						}
+						
+						rightMotor.backward();
+						leftMotor.backward();
+						Delay.msDelay(1000);
+						if( go_left )
+						{
+							steeringMotor.rotateTo(-(steeringRange/3), true); //Start going to left
+						}
 						else
+						{
 							steeringMotor.rotateTo((steeringRange/3), true); //Start going to right
+						}
+						rightMotor.forward();
+						leftMotor.forward();
+						Delay.msDelay(1000);
 					}
-	
-					rightMotor.forward();
-					leftMotor.forward();
-					Delay.msDelay(1000);
 				}
 
 				correctVeer(); //steer away from wall/ steer toward endAngle
