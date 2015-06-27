@@ -16,6 +16,8 @@ import lejos.hardware.sensor.EV3IRSensor;
 import lejos.hardware.sensor.SensorMode;
 import lejos.robotics.SampleProvider;
 import lejos.utility.Delay;
+import missions.OKNavNoSolution.Cell;
+import missions.OKNavNoSolution.Status;
 
 public class MarsNavigation {
 
@@ -94,15 +96,18 @@ public class MarsNavigation {
 				int backoffLeft = getBackoff(Status.Turning_Left);
 				if(backoffLeft != 0)
 				{
-					steeringMotor.rotateTo(steeringRange / 3);
+					steeringMotor.rotateTo(steeringRange / 2);
 					rightMotor.rotate(backoffLeft, true);
 					leftMotor.rotate(backoffLeft);
 				}
+				endAngle += 90;
+				angleSense.fetchSample(gyroAngles, 0);				
+				steeringMotor.rotateTo((int) (gyroAngles[0] - endAngle) * trueMultiplier );
 
-				steeringMotor.rotateTo(-(steeringRange/3));
+//				steeringMotor.rotateTo(-(steeringRange/2));
 				rightMotor.forward();
 				leftMotor.forward();
-				endAngle += 90;
+
 //				endAngle = correctAngle(gyroAngles[0])+90;
 				break;
 			case Turning_Right:
@@ -110,16 +115,21 @@ public class MarsNavigation {
 				int backoffRight = getBackoff(Status.Turning_Right);
 				if(backoffRight != 0)
 				{
-					steeringMotor.rotateTo(-steeringRange / 3);
+					steeringMotor.rotateTo(-steeringRange / 2);
 					rightMotor.rotate(backoffRight, true);
 					leftMotor.rotate(backoffRight);
 				}
 
-				steeringMotor.rotateTo(steeringRange/3);
+//				steeringMotor.rotateTo(steeringRange/2);
+				endAngle -= 90;
+				angleSense.fetchSample(gyroAngles, 0);				
+				steeringMotor.rotateTo((int) (gyroAngles[0] - endAngle) * trueMultiplier );
+				
 				rightMotor.forward();
 				leftMotor.forward();
-				endAngle -= 90;
+
 //				endAngle = correctAngle(gyroAngles[0])-90;
+				break;
 			default:
 				break;
 			}
@@ -138,16 +148,16 @@ public class MarsNavigation {
 			orig_steer = steeringMotor.getTachoCount();
 			leftMotor.stop();
 			rightMotor.stop();
-			if( Cell.getCurrentCell() == turningFrom ) //if(gyroAngles[0] <= (endAngle - (4*ANGLE_ERROR_MARGIN)))
-			{
-				System.out.println("Recovering from stall; still in same cell");
-				leftMotor.rotate(-90, true); //Back off 7cm
-				rightMotor.rotate(-90);
-				steeringMotor.rotateTo((steeringRange/3), true);
-				leftMotor.rotate(135, true); //Go forward 7 cm in other direction
-				rightMotor.rotate(135);
-			}
-			else
+//			if( Cell.getCurrentCell() == turningFrom ) //if(gyroAngles[0] <= (endAngle - (4*ANGLE_ERROR_MARGIN)))
+//			{
+//				System.out.println("Recovering from stall; still in same cell");
+//				leftMotor.rotate(-90, true); //Back off 7cm
+//				rightMotor.rotate(-90);
+//				steeringMotor.rotateTo((steeringRange/3), true);
+//				leftMotor.rotate(135, true); //Go forward 7 cm in other direction
+//				rightMotor.rotate(135);
+//			}
+//			else
 			{
 				System.out.println("Recovering from stall; not in same cell");
 				steeringMotor.rotateTo((steeringRange/3), true);
@@ -157,20 +167,21 @@ public class MarsNavigation {
 			steeringMotor.rotateTo(orig_steer);
 			rightMotor.forward();
 			leftMotor.forward();
+			break;
 		case Turning_Right:
 			orig_steer = steeringMotor.getTachoCount();
 			leftMotor.stop();
 			rightMotor.stop();
-			if( Cell.getCurrentCell() == turningFrom )
-			{
-				System.out.println("Recovering from stall; still in same cell");
-				leftMotor.rotate(-90, true); 
-				rightMotor.rotate(-90);
-				steeringMotor.rotateTo(-(steeringRange/3), true);
-				leftMotor.rotate(135, true); 
-				rightMotor.rotate(135);
-			}
-			else
+//			if( Cell.getCurrentCell() == turningFrom )
+//			{
+//				System.out.println("Recovering from stall; still in same cell");
+//				leftMotor.rotate(-90, true); 
+//				rightMotor.rotate(-90);
+//				steeringMotor.rotateTo(-(steeringRange/3), true);
+//				leftMotor.rotate(135, true); 
+//				rightMotor.rotate(135);
+//			}
+//			else
 			{
 				System.out.println("Recovering from stall; not in same cell");
 				steeringMotor.rotateTo(-(steeringRange/3), true);
@@ -217,7 +228,7 @@ public class MarsNavigation {
 		{
 			offset = spaceDist - offset;
 		}
-		if(offset > 0.25)
+		if(offset > 0.20)
 			offset -= 0.20;
 //		if(st == Status.Turning_Left) 
 //		{
@@ -590,7 +601,7 @@ public class MarsNavigation {
 //				leftSense.fetchSample(lSamples, 0);				
 //				angleSense.fetchSample(gyroAngles, 0);
 //				System.out.println("Current Gyro Angle: " + gyroAngles[0]);
-				correctVeer();
+
 //				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
 
 				current = Cell.getCurrentCell();
@@ -617,16 +628,18 @@ public class MarsNavigation {
 				{
 					setStatus(Status.Forward);
 				}
+				else correctVeer();
+				
 				break;
 			case Forward:
 				bothSense.fetchSample(bSamples, 0);
-				seekSense.fetchSample(beaconData, 0);
-				correctVeer();
+//				seekSense.fetchSample(beaconData, 0);
+
 				frontSense.fetchSample(frontSamples, 0);
 				System.out.println("Left distance:\t" + bSamples[0]);
 //				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
-				if(beaconData[1]<=15)
-					setStatus(null);
+//				if(beaconData[1]<=15) Was causing null exception
+//					setStatus(null);
 				current = Cell.getCurrentCell();
 				if(current != prevCell)
 				{
@@ -647,6 +660,7 @@ public class MarsNavigation {
 //					System.out.println("Moving Backward " + i);
 					setStatus(Status.Backward);
 				}
+				else correctVeer();
 				break;
 			case Turning_Left:
 				current = Cell.getCurrentCell();
@@ -659,6 +673,7 @@ public class MarsNavigation {
 				{
 					recover(currentStatus);
 				}
+				else {
 				angleSense.fetchSample(gyroAngles, 0);
 //				System.out.println("Current Angle: " + gyroAngles[0]);
 //				System.out.println("Desired Angle: " + endAngle);
@@ -666,6 +681,9 @@ public class MarsNavigation {
 				{
 					setStatus(Status.Forward);
 //					System.out.println("Moving Forward " + i);
+				}
+				else
+					steeringMotor.rotateTo(-(steeringRange/3), true);
 				}
 				break;
 			case Turning_Right:
@@ -679,15 +697,22 @@ public class MarsNavigation {
 				{
 					recover(currentStatus);
 				}
-				angleSense.fetchSample(gyroAngles, 0);
-//				System.out.println("Current Angle: " + gyroAngles[0]);
-//				System.out.println("Desired Angle: " + endAngle);
-				if(gyroAngles[0] <= (endAngle + (4 *ANGLE_ERROR_MARGIN)))
+				else
 				{
-					setStatus(Status.Forward);
-//					System.out.println("Moving Forward " + i);
+					angleSense.fetchSample(gyroAngles, 0);
+				
+//					System.out.println("Current Angle: " + gyroAngles[0]);
+//					System.out.println("Desired Angle: " + endAngle);
+					if(gyroAngles[0] <= (endAngle + (4 *ANGLE_ERROR_MARGIN)))
+					{
+						setStatus(Status.Forward);
+//						System.out.println("Moving Forward " + i);
+					}
+					else
+						steeringMotor.rotateTo((steeringRange/3), true);
 				}
 				break;
+
 			default:
 				break;
 			}
