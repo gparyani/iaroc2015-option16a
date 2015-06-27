@@ -601,14 +601,17 @@ public class MarsNavigation {
 //				System.out.println("After correcting veer at iteration " + i + ":\t" + (System.nanoTime() - beginningTime));
 
 				current = Cell.getCurrentCell();
-				int cellPosition = cellStack.search(current);
-				if(cellPosition != -1)
+				if(current != prevCell)
 				{
-					for(int n=1;n<cellPosition;n++)
+					int cellPosition = cellStack.search(current);
+					if(cellPosition != -1)
 					{
-						cellStack.pop();
+						for(int n=1;n<cellPosition;n++)
+						{
+							cellStack.pop();
+						}
+						current.setWallState(currentBearing, Cell.WallState.VIRTUAL_WALL);
 					}
-					current.setWallState(currentBearing, Cell.WallState.VIRTUAL_WALL);
 				}
 				prevCell = current;
 				System.out.println("Right sense: "+bSamples[1]+ "Placing VWALL on"+current.toString()+" For " + currentBearing.toString());
@@ -639,8 +642,20 @@ public class MarsNavigation {
 				current = Cell.getCurrentCell();
 				if(current != prevCell)
 				{
-					cellStack.push(current);
-					prevCell = current;
+					int cellPosition = cellStack.search(current);
+					if(cellPosition != -1)
+					{
+						for(int n=1;n<cellPosition;n++)
+						{
+							cellStack.pop();
+						}
+						current.setWallState(currentBearing.getOppositeDirection(), Cell.WallState.VIRTUAL_WALL);
+					}
+					else
+					{
+						cellStack.push(current);
+						prevCell = current;
+					}
 				}
 				if(leftMotor.isStalled() || rightMotor.isStalled())
 					recover(currentStatus);
