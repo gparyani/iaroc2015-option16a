@@ -16,8 +16,6 @@ import lejos.hardware.sensor.EV3IRSensor;
 import lejos.hardware.sensor.SensorMode;
 import lejos.robotics.SampleProvider;
 import lejos.utility.Delay;
-import missions.OKNavNoSolution.Cell;
-import missions.OKNavNoSolution.Status;
 
 public class MarsNavigation {
 
@@ -61,7 +59,7 @@ public class MarsNavigation {
 	static int steerPos = 0;
 	static Cell turningFrom;
 	static Cell prevCell = null;
-	static Stack cellStack = new Stack<Cell>();
+	static Stack<Cell> cellStack = new Stack<Cell>();
 	static final float WALL_SENSITIVITY = 0.15f;
 	static Direction currentBearing = Direction.NORTH;
 	
@@ -142,7 +140,16 @@ public class MarsNavigation {
 		switch( st )
 		{
 		case Forward:
-			frontSamples[0] = 0 ;
+			frontSamples[0] = 0;
+			leftMotor.stop();
+			rightMotor.stop();
+			leftMotor.rotate(-60);
+			rightMotor.rotate(-60);
+			leftMotor.stop();
+			rightMotor.stop();
+			correctVeer();
+			leftMotor.forward();
+			rightMotor.forward();
 			break;
 		case Turning_Left:
 			orig_steer = steeringMotor.getTachoCount();
@@ -226,23 +233,12 @@ public class MarsNavigation {
 		}
 		if(currentStatus == Status.Backward)
 		{
-			offset = spaceDist - offset;
+			offset = 0;
 		}
-		if(offset > 0.20)
-			offset -= 0.20;
-//		if(st == Status.Turning_Left) 
-//		{
-//			if(offset > 0.10)
-//				offset -= 0.05;
-//		}
-//		if (st == Status.Turning_Right)
-//		{
-//			if(offset < 0.60)
-//				offset += 0.05;
-//		}
+		offset *= 0.7;
 		int toReturn = (int) ((-offset) * 412);
-		if(Math.abs(toReturn) < 30)
-			toReturn = 0;
+		if(Math.abs(toReturn) < 20)
+			toReturn = -60;
 		System.out.println("Backoff: " + toReturn);
 		return toReturn;
 	}
@@ -579,8 +575,8 @@ public class MarsNavigation {
 		}		
 		else if(press == Button.RIGHT.getId())
 		{
-			leftMotor.setSpeed(125);
-			rightMotor.setSpeed(125);
+			leftMotor.setSpeed(130);
+			rightMotor.setSpeed(130);
 
 			setStatus(Status.Forward);
 			
@@ -646,6 +642,8 @@ public class MarsNavigation {
 					cellStack.push(current);
 					prevCell = current;
 				}
+				if(leftMotor.isStalled() || rightMotor.isStalled())
+					recover(currentStatus);
 				if( current != turningFrom ) turningFrom = null;
 				
 				if(current.getWallState(currentBearing.getLeftDirection()) != Cell.WallState.VIRTUAL_WALL && (bSamples[0]>=spaceDist && !(current.equals(turningFrom))))
