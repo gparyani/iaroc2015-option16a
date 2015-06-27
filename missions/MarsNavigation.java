@@ -739,6 +739,7 @@ public class MarsNavigation {
 				currentStatus = null;
 				turningFrom = null;
 				//above commands will cause Cell.getCurrentCell() to return (0, 0)
+				cellStack.clear();
 				Button.LEDPattern(4);
 				Button.waitForAnyPress();
 				Button.LEDPattern(1);
