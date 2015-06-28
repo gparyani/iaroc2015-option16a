@@ -2,11 +2,13 @@ package missions;
 
 import helperClasses.ArduinoSideSensors;
 
+import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Stack;
 
 import lejos.hardware.Button;
+import lejos.hardware.Sound;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 import lejos.hardware.motor.EV3MediumRegulatedMotor;
 import lejos.hardware.port.MotorPort;
@@ -62,6 +64,7 @@ public class MarsNavigation {
 	static Stack<Cell> cellStack = new Stack<Cell>();
 	static final float WALL_SENSITIVITY = 0.15f;
 	static Direction currentBearing = Direction.NORTH;
+	static Cell finalCell;
 	
 	public static Status getStatus()
 	{
@@ -258,7 +261,7 @@ public class MarsNavigation {
 
 	public static enum Direction
 	{
-		NORTH, SOUTH, EAST, WEST, IN_BETWEEN;
+		NORTH, SOUTH, EAST, WEST;
 		
 		public static Direction getDirectionFromGyro()
 		{
@@ -269,16 +272,14 @@ public class MarsNavigation {
 				modifiedAngle += 360;
 			modifiedAngle %= 360;
 			
-			if(modifiedAngle >= 90 - 4*ANGLE_ERROR_MARGIN && modifiedAngle <= 90 + 4*ANGLE_ERROR_MARGIN)
+			if(modifiedAngle >= 45 && modifiedAngle <= 134)
 				return WEST;
-			else if(modifiedAngle >= 180 - 4*ANGLE_ERROR_MARGIN && modifiedAngle <= 180 + 4*ANGLE_ERROR_MARGIN)
+			else if(modifiedAngle >= 135 && modifiedAngle <= 224)
 				return SOUTH;
-			else if(modifiedAngle >= 270 - 4*ANGLE_ERROR_MARGIN && modifiedAngle <= 270 + 4*ANGLE_ERROR_MARGIN)
+			else if(modifiedAngle >= 225 && modifiedAngle <= 314)
 				return EAST;
-			else if(modifiedAngle >= 360 - 4*ANGLE_ERROR_MARGIN || modifiedAngle <= 4*ANGLE_ERROR_MARGIN)
+			else
 				return NORTH;
-			
-			return IN_BETWEEN;
 		}
 		
 		public Direction getOppositeDirection()
@@ -823,7 +824,19 @@ public class MarsNavigation {
 				break;
 			}
 			
-			if(Button.ENTER.isDown()) 
+			if(finalCell != null && finalCell.equals(Cell.getCurrentCell()))
+			{
+				leftMotor.stop();
+				rightMotor.stop();
+				Sound.playSample(new File("tada.wav"), 100);
+				for(int i1 = 1; true; i1++)
+				{
+					Button.LEDPattern(i1 % 2 + 1);
+					Delay.msDelay(100);
+				}
+			}
+			
+			if(Button.ENTER.isDown() || Button.UP.isDown()) 
 			{
 				leftMotor.stop(); 
 				rightMotor.stop();
@@ -833,6 +846,8 @@ public class MarsNavigation {
 				turningFrom = null;
 				//above commands will cause Cell.getCurrentCell() to return (0, 0)
 				cellStack.clear();
+				if(Button.ENTER.isDown())
+					finalCell = Cell.getCurrentCell();
 				Button.LEDPattern(4);
 				Button.waitForAnyPress();
 				Button.LEDPattern(1);
