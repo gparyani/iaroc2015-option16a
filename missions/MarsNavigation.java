@@ -840,14 +840,14 @@ public class MarsNavigation {
 			{
 				leftMotor.stop(); 
 				rightMotor.stop();
+				if(Button.ENTER.isDown() && finalCell == null)
+					finalCell = Cell.getCurrentCell();
 				realX = spaceDist / 2.0; //refreshes coordinates
 				realY = 0.14; //distance from back of the robot to center
 				currentStatus = null;
 				turningFrom = null;
 				//above commands will cause Cell.getCurrentCell() to return (0, 0)
 				cellStack.clear();
-				if(Button.ENTER.isDown())
-					finalCell = Cell.getCurrentCell();
 				Button.LEDPattern(4);
 				Button.waitForAnyPress();
 				Button.LEDPattern(1);
@@ -986,7 +986,7 @@ public class MarsNavigation {
 		}
 		else if( bSamples[0] < (0.42) && bSamples[0] > 0.21)
 		{
-			newSteerPos = (int)(-70 * (bSamples[0] - 0.21) - 5) * MULTIPLIER;
+			newSteerPos = (int)(-40 * (bSamples[0] - 0.21) - 5) * MULTIPLIER;
 			System.out.println( "Too away LEFT : " +newSteerPos);
 		}
 		else if( bSamples[1] < WALL_SENSITIVITY)
@@ -996,7 +996,7 @@ public class MarsNavigation {
 		}
 		else if( bSamples[1] < 0.42 && bSamples[1] > 0.21)
 		{
-			newSteerPos = (int)(70 * (bSamples[1] - 0.21) + 5) * MULTIPLIER;
+			newSteerPos = (int)(40 * (bSamples[1] - 0.21) + 5) * MULTIPLIER;
 			System.out.println( "Too away RIGHT : " +newSteerPos);
 		}
 		else
