@@ -656,8 +656,8 @@ public class MarsNavigation {
 		}		
 		else if(press == Button.RIGHT.getId())
 		{
-			leftMotor.setSpeed(130);
-			rightMotor.setSpeed(130);
+			leftMotor.setSpeed(140);
+			rightMotor.setSpeed(140);
 
 			setStatus(Status.Forward);
 			
@@ -894,32 +894,37 @@ public class MarsNavigation {
 //TODO:			target_angle = seekIR(); //Is there a beacon, make it the end angle
 				if(seek != 0)
 				{
-					Button.LEDPattern(4);
+					Button.LEDPattern(3);
 					if(frontSamples[0]<=30 || leftMotor.isStalled() || rightMotor.isStalled())
 					{
 						rightMotor.stop();
 						leftMotor.stop();
+//						angleSense.fetchSample(gyroAngles, 0);
+//						float currentAngle = gyroAngles[0];
 
-						if( bSamples[0] < WALL_SENSITIVITY ) {
-							go_left = false;
-						}
-						else if( bSamples[1] < WALL_SENSITIVITY  ) {
-							go_left = true;
-						}
-						
+//						if( bSamples[0] < WALL_SENSITIVITY ) {
+//							go_left = false;
+//						}
+//						else if( bSamples[1] < WALL_SENSITIVITY  ) {
+//							go_left = true;
+//						}
+						steeringMotor.rotateTo(0);
 						rightMotor.backward();
 						leftMotor.backward();
 						Delay.msDelay(500);
-						if( go_left )
-						{
-							steeringMotor.rotateTo(-(steeringRange/4), true); //Go left less, beacon in sight
-							
-						}
-						else
-						{
-							steeringMotor.rotateTo((steeringRange/4), true); //Go right less, beacon in sight
-						}
-		
+						rightMotor.stop();
+						leftMotor.stop();
+						
+//						if( go_left )
+//						{
+//							steeringMotor.rotateTo(-(steeringRange/4), true); //Go left less, beacon in sight
+//							
+//						}
+//						else
+//						{
+//							steeringMotor.rotateTo((steeringRange/4), true); //Go right less, beacon in sight
+//						}
+						steeringMotor.rotateTo((target_angle/25) * (steeringRange/3));
 						rightMotor.forward();
 						leftMotor.forward();
 						Delay.msDelay(1000);
@@ -931,11 +936,8 @@ public class MarsNavigation {
 				}
 				else
 				{
-					if(frontSamples[0]>30)
-					{
-						endAngle = target_angle;
-					}
-					else
+					Button.LEDPattern(2);
+					if(frontSamples[0]<=30 || leftMotor.isStalled() || rightMotor.isStalled())
 					{
 						rightMotor.stop();
 						leftMotor.stop();
@@ -961,6 +963,10 @@ public class MarsNavigation {
 						rightMotor.forward();
 						leftMotor.forward();
 						Delay.msDelay(1000);
+					}
+					else if(frontSamples[0]>30)
+					{
+						endAngle = target_angle;
 					}
 				}
 

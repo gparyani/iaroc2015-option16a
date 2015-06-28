@@ -427,7 +427,7 @@ public class RoverSpeed {
 					rightSense.fetchSample(rSamples, 0);
 					System.out.println("Front Reading: " + frontSamples[0]);
 					correctVeer();
-					if( leftMotor.getTachoCount() > (412 * 6)) // go max speed for 4 meters
+					if( leftMotor.getTachoCount() > (412 * 7)) // go max speed for 7 meters
 					{
 						if(frontSamples[0] <= 40) // if it is within 40 cm
 						{
@@ -443,14 +443,14 @@ public class RoverSpeed {
 								leftMotor.forward();
 							}
 						}
-						else //if it has gone 6 meters but not within 40 cm of wall
+						else //if it has gone 7 meters but not within 40 cm of wall
 						{
-							if(speed != rightMotor.getMaxSpeed() / 2) //and speed has not been reduced
+							if(speed != rightMotor.getMaxSpeed() / 3) //and speed has not been reduced
 							{
-								System.out.println("Reducing speed to 1/2");
+								System.out.println("Reducing speed to 1/3");
 //								rightMotor.flt();
 //								leftMotor.flt();
-								speed = rightMotor.getMaxSpeed() / 2; //reduce speed to 1/2
+								speed = rightMotor.getMaxSpeed() / 3; //reduce speed to 1/2
 								rightMotor.setSpeed(speed);
 								leftMotor.setSpeed(speed);
 								rightMotor.forward();
@@ -478,8 +478,8 @@ public class RoverSpeed {
 		}		
 		else if(press == Button.RIGHT.getId())
 		{
-			leftMotor.setSpeed(125);
-			rightMotor.setSpeed(125);
+			leftMotor.setSpeed(150);
+			rightMotor.setSpeed(150);
 
 			setStatus(Status.Forward);
 			
